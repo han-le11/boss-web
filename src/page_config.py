@@ -6,13 +6,16 @@ class Config:
         pass
 
     @classmethod
-    def set(cls):
+    def set_page(cls):
         st.set_page_config(
-            page_title="BOSS Web App",
+            page_title="Bayesian Optimization Structure Search (BOSS)",
             layout="wide",
             initial_sidebar_state="expanded",
             menu_items={
                 'Get Help': 'https://www.boss.ai/help'
             }
         )
-        # return None
+
+    @classmethod
+    def set_main_title(cls):
+        st.title('Bayesian Optimization Structure Search (BOSS)')
