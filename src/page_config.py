@@ -1,12 +1,9 @@
 import streamlit as st
 
 
-class Config:
-    def __init__(self):
-        pass
-
-    @classmethod
-    def set_page(cls):
+class PageConfig:
+    @staticmethod
+    def set_page():
         st.set_page_config(
             page_title="Bayesian Optimization Structure Search (BOSS)",
             layout="wide",
@@ -16,6 +13,6 @@ class Config:
             }
         )
 
-    @classmethod
-    def set_main_title(cls):
+    @staticmethod
+    def set_main_title():
         st.title('Bayesian Optimization Structure Search (BOSS)')
