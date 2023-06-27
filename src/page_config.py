@@ -6,7 +6,7 @@ class PageConfig:
     def set_page():
         st.set_page_config(
             page_title="Bayesian Optimization Structure Search (BOSS)",
-            layout="wide",
+            layout="centered",
             initial_sidebar_state="expanded",
             menu_items={
                 'Get Help': 'https://www.boss.ai/help'
