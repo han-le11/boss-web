@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-class PageConfig:
+class RunPageConfig:
     @staticmethod
     def set_page():
         st.set_page_config(
