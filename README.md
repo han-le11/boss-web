@@ -7,7 +7,7 @@ main        <- Stable version
 develop     <- For development of new features 
 ```
 ## Jira board links
-[Tasks to do, in progress, in review, and done](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1?selectedIssue=BOSS-5)\
+[Tasks to do, in progress, in review, and done](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1?selectedIssue=BOSS-5&atlOrigin=eyJpIjoiNTM3NDI5MzFkM2RhNGY2N2IyODBlYzE3YjllNGQyM2IiLCJwIjoiaiJ9)\
 [Project Backlog](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1/backlog?atlOrigin=eyJpIjoiMGUyZjlmNmI0ZTUxNDY0NThhMWE0YTdmMWEyNjkxZmUiLCJwIjoiaiJ9)
 
 ## How To Run
