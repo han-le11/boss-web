@@ -33,5 +33,5 @@ $ (env) pip install -r requirements.txt
 
 5. Finally, start the web app on local host:
 ```
-$ (env) streamlit run src/app.py
+$ (env) streamlit run src/home.py
 ```
