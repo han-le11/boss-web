@@ -1,22 +1,84 @@
 import os
+import numpy as np
 import streamlit as st
-from boss.pp.pp_main import PPMain
 from PIL import Image
 
 
-def run_post_processing(res):
-    pp = PPMain(res, pp_models=True, pp_acq_funcs=True)
-    pp.run()
+class PostprocessingService:
+    def __init__(self, bo_results, x_names):
+        self.bo_results = bo_results
+        self.x_names = x_names
+        self.expander = None
 
+    @staticmethod
+    def plot_models_or_not():
+        pp_models = st.checkbox("Plot GP models and uncertainty.", value=True)
+        return bool(pp_models)
 
-def show_model_and_uncertainty():
-    pp_dir = './postprocessing/graphs_models'
-    for path, directories, files in os.walk(pp_dir):
-        for file in files:
-            if file.endswith(("png", "jpg")):
-                img_path = os.path.join(path, file)
-                img = Image.open(img_path)
-                if "uncert" in img_path:
-                    st.image(img, caption='Uncertainty over the search space.')
-                else:
-                    st.image(img, caption='Acquisitions, next acquisition point, and global minimum.')
+    def input_pp_iters(self):
+        pp_iters = st.multiselect("Which iterations to run post-processing? Can't be chosen if there is no iteration.",
+                                  options=np.arange(0, np.arange(0, self.bo_results.num_iters)),
+                                  default=None)
+        return pp_iters
+
+    def plot_acqfn_or_slice(self):
+        # By default, when this checkbox first renders, it is selected.
+        plot_acqfns = st.checkbox("Plot the acquisition functions in first and second axes. "
+                                  "If not selected, you can customize which axes to plot.",
+                                  value=True)
+        model_slice = [1, 2, 50]
+        if not plot_acqfns:
+            x, y, z = self.input_model_slice()
+            model_slice[0] = self.x_names.index(x) + 1
+            model_slice[1] = self.x_names.index(y) + 1
+            model_slice[2] = z
+        return plot_acqfns, model_slice
+
+    def input_model_slice(self):
+        # pp_models_slice = [x,y,z]
+        # x and y define the cross-section and z is grid
+        st.write("Which cross-section (max 2D) of the objective function to plot?")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            x = st.selectbox("First axis of cross-section", options=self.x_names)
+        with col2:
+            y = st.selectbox("Second axis of cross-section", options=self.x_names)
+        with col3:
+            z = st.number_input("Number of points per edge in the grid", value=50, step=1, min_value=1)
+        return x, y, z
+
+    def show_plots(self, path, title, warning_text):
+        if os.path.isdir(path):
+            self.expander = st.expander(title, expanded=True)
+            for path, directories, files in os.walk(path):
+                columns = self.expander.columns(2, gap="medium")
+                for i, file in enumerate(files):
+                    if file.endswith(("png", "jpg")):
+                        with columns[i]:
+                            img_path = os.path.join(path, file)
+                            img = Image.open(img_path)
+                            if "uncert" in img_path:
+                                st.image(img, caption="Uncertainty over the search space")
+                            elif "acquisition_locations" in img_path:
+                                st.image(img, caption="Acquisition locations")
+                            else:
+                                st.image(img, caption="Acquisitions, next acquisition, and global minimum")
+        else:
+            st.warning(warning_text)
+        return None
+
+    def display_model_and_uncertainty(self):
+        pp_dir = "./postprocessing/graphs_models"
+        self.show_plots(pp_dir, "Model plots",
+                        "No model plots to display. Make sure that you have chosen to plot something.")
+
+    def display_acqfns(self):
+        path = "./postprocessing/graphs_acqfns"
+        self.show_plots(path, "Acquisition function", "No other plots for acquisition functions.")
+
+    @staticmethod
+    def download_dat():
+        pass
+        data_acqfn = "./postprocessing/data_acqfns"
+        st.download_button(label="Download data of acquisition function",
+                           data=data_acqfn)
