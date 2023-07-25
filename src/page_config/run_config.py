@@ -5,15 +5,21 @@ class RunPageConfig:
     @staticmethod
     def set_page():
         st.set_page_config(
-            page_title="Run BOSS", layout="centered", initial_sidebar_state="expanded"
+            page_title="Run BOSS", layout="centered", initial_sidebar_state="collapsed"
         )
+        css = '''
+            <style>
+                section.main > div {max-width:75rem}
+            </style>
+            '''
+        st.markdown(css, unsafe_allow_html=True)
 
     @staticmethod
     def set_main_title():
         st.title("🏃‍♀️ Run BOSS")
 
     @staticmethod
-    def hide_toggles():
+    def remove_toggles():
         st.markdown("""
                     <style>
                         button.step-up {display: none;}
@@ -22,3 +28,6 @@ class RunPageConfig:
                     </style>""",
                     unsafe_allow_html=True
                     )
+
+
+
