@@ -2,7 +2,6 @@ import logging
 import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
-from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 from ui.boss_run_params import input_x_bounds, set_y_range
@@ -27,8 +26,8 @@ page_config.set_header()
 customize_footer()
 remove_toggles()
 
-init_data_tab, run_tab, postprocess_tab = st.tabs(
-    ["Create initial data", "Run BOSS", "Post-processing"]
+run_tab, postprocess_tab = st.tabs(
+    ["Run BOSS", "Post-processing"]
 )
 logger = logging.getLogger("boss_server")
 
@@ -52,20 +51,6 @@ def run_boss():
         result = bo.run(X_vals, -Y_vals)
     st.session_state["bo_result"] = result  # write to session state
     return result
-
-
-with init_data_tab:
-    init_tab = InitManagerTab()
-    init_type, initpts, dim = init_tab.set_page()
-    init_bounds = set_input_var_bounds(dim)
-    if st.button("Generate points"):
-        init_manager = init_tab.set_init_manager(init_type, initpts, init_bounds)
-        if init_manager is not None:
-            init_points = init_manager.get_all()  # return points
-            st.write(init_points)
-            init_tab.download_init_points(init_points)
-        else:
-            st.warning("Error: Please input variable names and bounds.")
 
 
 with run_tab:
@@ -115,7 +100,6 @@ with postprocess_tab:
         with col1:
             pp_iters = pp.input_pp_iters()
 
-        # plot_models_or_not = pp.plot_models_or_not()
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
 
         if st.button("Run post-processing"):

@@ -10,11 +10,6 @@ class PostprocessingTab:
         self.x_names = x_names
         self.expander = None
 
-    @staticmethod
-    def plot_models_or_not() -> bool:
-        pp_models = st.checkbox("Plot GP models and uncertainty.", value=True)
-        return pp_models
-
     def input_pp_iters(self):
         pp_iters = st.multiselect(
             "Which iterations to run post-processing?",
