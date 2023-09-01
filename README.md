@@ -1,11 +1,13 @@
 # Bayesian Optimization Structure Search (BOSS) web app
 
 Prototype development of the web interface for Bayesian Optimization Structure Search (BOSS). 
-This repo currently has two branches:
+This repo currently has two main branches:
 ```
 main        <- Stable version
-develop     <- For development of new features 
+develop     <- For development
 ```
+There are other small feature branches.
+
 ## Jira board links
 [Tasks to do, in progress, in review, and done](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1?selectedIssue=BOSS-5&atlOrigin=eyJpIjoiNTM3NDI5MzFkM2RhNGY2N2IyODBlYzE3YjllNGQyM2IiLCJwIjoiaiJ9)\
 [Project Backlog](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1/backlog?atlOrigin=eyJpIjoiMGUyZjlmNmI0ZTUxNDY0NThhMWE0YTdmMWEyNjkxZmUiLCJwIjoiaiJ9)
