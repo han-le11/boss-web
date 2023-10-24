@@ -1,5 +1,6 @@
 import logging
 import streamlit as st
+import numpy as np
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
@@ -12,6 +13,8 @@ from ui.result_displayer import display_result, display_next_acq
 # Initialization
 if "bo_result" not in st.session_state:
     st.session_state["bo_result"] = None
+if "init_pts" not in st.session_state:
+    st.session_state["init_pts"] = None
 for k, v in st.session_state.items():
     st.session_state[k] = v
 
@@ -57,16 +60,27 @@ def run_boss():
 with init_data_tab:
     init_tab = InitManagerTab()
     init_type, initpts, dim = init_tab.set_page()
-    init_bounds = set_input_var_bounds(dim)
-    if st.button("Generate points"):
-        init_manager = init_tab.set_init_manager(init_type, initpts, init_bounds)
-        if init_manager is not None:
-            init_points = init_manager.get_all()  # return points
-            st.write(init_points)
-            init_tab.download_init_points(init_points)
-        else:
-            st.warning("Error: Please input variable names and bounds.")
+    init_bounds, names_and_bounds = set_input_var_bounds(dim)
+    init_manager = init_tab.set_init_manager(init_type,
+                                             initpts,
+                                             init_bounds)
 
+    def save_df_edits():
+        st.session_state["init_pts"] = st.session_state["init_pts"]
+
+    if st.button("Generate points"):
+        if np.isnan(init_bounds).any():
+            st.warning("Error: Please input variable names and bounds.")
+        else:
+            init_pts = init_manager.get_all()  # return init points
+            # print(init_pts)
+            data_df = init_tab.add_fields_for_y_vals(init_pts, names_and_bounds=names_and_bounds)
+            st.session_state["init_pts"] = data_df   # write to session state
+
+    if st.session_state["init_pts"] is not None:
+        # record data in an editable array
+        edited_array = st.data_editor(st.session_state["init_pts"], on_change=save_df_edits)
+        init_tab.download_init_points(edited_array)
 
 with run_tab:
     st.markdown(
@@ -92,16 +106,19 @@ with run_tab:
         )
 
     if st.button("Run BOSS"):
-        try:
-            res = run_boss()
-            display_result(res, min_or_max, X_names)
-            display_next_acq(res, X_names)
-        # except AssertionError:
-        #     st.error(
-        #         "Error: Have you input all required fields? "
-        #         "Make sure that the lower bound of a variable is smaller than its upper bound."
-        #     )
-        except ValueError:
+        if np.isnan(bounds).any():
+            try:
+                res = run_boss()
+                display_result(res, min_or_max, X_names)
+                display_next_acq(res, X_names)
+            # except AssertionError:
+            #     st.error(
+            #         "Error: Have you input all required fields? "
+            #         "Make sure that the lower bound of a variable is smaller than its upper bound."
+            #     )
+            except ValueError:
+                st.error("Error: Have you input all required fields?")
+        else:
             st.error("Error: Have you input all required fields?")
 
 with postprocess_tab:
