@@ -25,6 +25,13 @@ def input_init_points() -> int:
 
 
 def set_input_var_bounds(dimension):
+    """
+
+    :param dimension:
+    :return:
+    bounds: this is used to generate init points with InitManager
+    names_and_bounds: a dictionary of variable names and corresponding bounds
+    """
     bounds = np.ones(shape=(dimension, 2)) * np.nan
     names_and_bounds = dict()
     for d in range(dimension):
@@ -52,10 +59,10 @@ def set_input_var_bounds(dimension):
     col1, col2, col3 = st.columns(3, gap="large")
     with col1:
         y_val_name = st.text_input(
-                                f"Write the name of the target variable",
-                                max_chars=50,
-                                help="A descriptive name will be great!",
-                                )
+            f"Write the name of the target variable",
+            max_chars=50,
+            help="A descriptive name will be great!",
+        )
     names_and_bounds[y_val_name] = None
     return bounds, names_and_bounds
 
@@ -136,11 +143,62 @@ class InitManagerTab:
 
     @staticmethod
     def add_fields_for_y_vals(init_array, names_and_bounds):
-        names = names_and_bounds.keys()
+        """
+        Return a dataframe with an empty column for target values.
+        :param init_array:
+        :param names_and_bounds:
+        :return:
+        """
+        var_names = names_and_bounds.keys()
         # st.write("test col names: ", names)
         y_vals = np.ones(shape=(init_array.shape[0], 1)) * np.nan
         xy_data = np.concatenate((init_array, y_vals), axis=1)  # concatenate a new column
         df = pd.DataFrame(data=xy_data,
-                          columns=names
+                          columns=var_names
                           )
         return df
+
+    @staticmethod
+    def add_data_with_bounds(init_array, names_and_bounds):
+        pass
+
+    @staticmethod
+    def record_df_with_bounds(init_array, names_and_bounds) -> pd.DataFrame:
+        """
+        This dataframe is not shown to the user.
+        It's only used for running BOSS: generated initial points as data, input fields for target value,
+        and input bounds.
+        :param init_array: np.array of initial points
+        :param names_and_bounds:
+        :return:
+        """
+        # first, get variable names given by the user
+        var_names = list(names_and_bounds.keys())
+
+        # store column names for the final df
+        df_col_names = list(names_and_bounds.keys())
+
+        num_init_points = init_array.shape[0]  # number of generated init points
+        dimension = init_array.shape[1]
+
+        # make array of size num_init_points x dimension
+        bounds = np.ones(shape=(num_init_points, dimension)) * np.nan
+
+        # make an empty column for user to record y_vals
+        y_vals = np.ones(shape=(init_array.shape[0], 1)) * np.nan
+        xy_data = np.concatenate((init_array, y_vals), axis=1)  # concatenate a new column for Y values
+
+        for n in range(len(var_names) - 1):
+            df_col_names.append(f"bound {var_names[n]}")  # store column names for the returned df
+            bound_n = names_and_bounds.get(var_names[n])
+            # st.write("col names", df_col_names)
+            bounds[0, n] = bound_n[0]
+            bounds[1, n] = bound_n[1]
+            # st.write("test data_with_bounds: ", bounds)
+
+        final_array = np.concatenate((xy_data, bounds), axis=1)  # concatenate the column for bounds
+        final_df = pd.DataFrame(data=final_array,
+                                columns=df_col_names
+                                )
+        return final_df
+

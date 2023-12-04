@@ -71,18 +71,21 @@ with init_data_tab:
     if st.button("Generate points"):
         if np.isnan(init_bounds).any():
             st.warning("Error: Please input variable names and bounds.")
-        else:
+        elif st.session_state["init_pts"] is None:
             init_pts = init_manager.get_all()  # return init points
-            # print(init_pts)
-            data_df = init_tab.add_fields_for_y_vals(init_pts, names_and_bounds=names_and_bounds)
-            st.session_state["init_pts"] = data_df   # write to session state
+            # save init points to session state
+            st.session_state["init_pts"] = init_tab.add_fields_for_y_vals(init_pts, names_and_bounds=names_and_bounds)
 
     if st.session_state["init_pts"] is not None:
-        # record data in an editable array
-        edited_array = st.data_editor(st.session_state["init_pts"], on_change=save_df_edits)
-        init_tab.download_init_points(edited_array)
+        # record data in an editable array and in session state
+        st.session_state["init_pts"] = st.data_editor(st.session_state["init_pts"], on_change=save_df_edits)
+        init_tab.download_init_points(st.session_state["init_pts"])
+        st.info("To use Bayesian optimization, please continue in the tab Run BOSS.")
+
 
 with run_tab:
+    st.write("Initial data points: ", st.session_state["init_pts"])
+
     st.markdown(
         "#### BOSS optimizes using your input data and suggests the next acquisition."
     )
