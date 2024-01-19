@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import pandas as pd
 import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
@@ -34,9 +35,19 @@ page_config.set_header()
 customize_footer()
 remove_toggles()
 
-init_data_tab, run_tab, postprocess_tab = st.tabs(
-    ["Create initial data", "Run BOSS", "Post-processing"]
+test_tab, init_data_tab, run_tab, postprocess_tab = st.tabs(
+    ["Test tab", "Create initial data", "Run BOSS", "Post-processing"]
 )
+
+with (test_tab):
+    df = pd.DataFrame(
+        [
+            {"var": "x", "number": 4, "bool": True},
+            {"var": "y", "number": 5, "bool": False},
+            {"var": "z", "number": 3, "bool": True},
+        ]
+    )
+    edited_df = st.data_editor(df)
 
 with (init_data_tab):
     init_tab = InitManagerTab()
@@ -45,7 +56,7 @@ with (init_data_tab):
     # st.session_state["names_and_bounds"] = names_and_bounds  # save to session state
     init_manager = init_tab.set_init_manager(init_type,
                                              initpts,
-                                             init_bounds,)
+                                             init_bounds, )
 
 
     def save_df_edits():
@@ -71,30 +82,9 @@ with (init_data_tab):
 
         # this df has concatenated bounds which is not shown in UI, only seen when downloaded
         st.session_state["init_pts_with_bounds"] = init_tab.add_bounds_to_dataframe(edited_df,
-                                                                                    st.session_state["names_and_bounds"])
+                                                                                    st.session_state[
+                                                                                        "names_and_bounds"])
         init_tab.download_init_points(st.session_state["init_pts_with_bounds"])
-
-
-def dummy_function(_):
-    pass
-
-
-def run_boss():
-    bo = BOMain(
-        dummy_function,
-        bounds=X_bounds,
-        yrange=[y_min, y_max],
-        kernel="rbf",
-        noise=noise_variance,
-        iterpts=0,
-    )
-    if min_or_max == "Minimize":
-        result = bo.run(X_vals, Y_vals)
-    else:
-        result = bo.run(X_vals, -Y_vals)
-    st.session_state["bo_result"] = result  # write to session state
-    return result
-
 
 with (run_tab):
     st.markdown(
@@ -106,6 +96,28 @@ with (run_tab):
     X_bounds = []
     Y_vals = []
     y_min, y_max = (float, float)
+
+
+    def dummy_function(_):
+        pass
+
+
+    def run_boss():
+        bo = BOMain(
+            dummy_function,
+            bounds=X_bounds,
+            yrange=[y_min, y_max],
+            kernel="rbf",
+            noise=noise_variance,
+            iterpts=0,
+        )
+        if min_or_max == "Minimize":
+            result = bo.run(X_vals, Y_vals)
+        else:
+            result = bo.run(X_vals, -Y_vals)
+        st.session_state["bo_result"] = result  # write to session state
+        return result
+
 
     if st.session_state["init_pts"] is not None and not np.isnan(init_bounds).any():
         # edited_df = st.data_editor(st.session_state["init_pts"])
