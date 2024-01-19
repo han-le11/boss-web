@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
 import streamlit as st
 
 
+# TODO
 def _check_bounds(lower_bound, upper_bound):
     if not lower_bound < upper_bound:
         st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
@@ -38,12 +40,6 @@ def input_x_bounds(X_names) -> np.ndarray:
             lower_bound, upper_bound = _return_bounds(X_names, d)
             bounds[d, 0] = lower_bound
             bounds[d, 1] = upper_bound
-            # x_min = np.amin(X_vals[d])
-            # x_max = np.amax(X_vals[d])
-            # st.info(
-            #     f"Info: "
-            #     f"min {X_names[d]} = {x_min} and max = {x_max}"
-            # )
     return bounds
 
 
@@ -53,14 +49,11 @@ def set_y_range(y_values, y_name) -> (float, float):
     These values are given to BOSS.
     """
     y_min, y_max = None, None
-    if y_name and y_values.size != 0:
+    if y_name and y_values.size != 0 or not np.isnan(y_values).any:
         y_min = np.amin(y_values)
         y_max = np.amax(y_values)
-        st.info(
-            f"Info: "
-            f"{y_name[0]} has min = {y_min} and max = {y_max}. "
-            f"These values are given to BOSS."
-        )
+    # else:
+    #     st.error("Please check that target values are filled.")
     return y_min, y_max
 
 
@@ -71,3 +64,35 @@ def set_optional_params():
     :return:
     """
     pass
+
+
+def dummy_function(_):
+    pass
+
+
+def parse_data_and_bounds(df, dim):
+    """
+    If there's a dataframe of initial points in the session state, then parse input variables as X, target variables
+    as Y.
+    :param df:
+    :param dim:
+    :return:
+    """
+    n_columns = df.shape[1]
+    X_vals = df.iloc[:, 0:dim].to_numpy()
+    Y_vals = df.iloc[:, dim].to_numpy()
+    X_names = list(df.columns.values)[0:dim]
+    y_name = list(df.columns.values)[dim]
+
+    inputs, outputs = st.columns(2)
+    with inputs:
+        st.write("Input variables", X_vals)
+    with outputs:
+        st.write("Target variable", Y_vals)
+
+    y_min, y_max = set_y_range(Y_vals, y_name)
+    X_bounds = df.iloc[0:2, dim + 1:n_columns].to_numpy()
+    st.write("Bounds", X_bounds)
+    X_bounds = np.transpose(X_bounds)
+
+    return X_vals, X_names, Y_vals, X_bounds, y_min, y_max
