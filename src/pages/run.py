@@ -1,20 +1,24 @@
 import logging
-import streamlit as st
 import numpy as np
+import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from ui.page_config import PageConfig, customize_footer, remove_toggles
-from ui.boss_run_params import input_x_bounds, set_y_range
+from ui.boss_run_params import input_x_bounds, set_y_range, parse_data_and_bounds
 from ui.file_handler import upload_file, choose_inputs_and_outputs
 from ui.result_displayer import display_result, display_next_acq
 
-# Initialization
+# Initialization of session_state
 if "bo_result" not in st.session_state:
     st.session_state["bo_result"] = None
+if "names_and_bounds" not in st.session_state:
+    st.session_state["names_and_bounds"] = None
 if "init_pts" not in st.session_state:
     st.session_state["init_pts"] = None
+if "init_pts_with_bounds" not in st.session_state:
+    st.session_state["init_pts_with_bounds"] = None
 for k, v in st.session_state.items():
     st.session_state[k] = v
 
@@ -33,7 +37,42 @@ remove_toggles()
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
 )
-logger = logging.getLogger("boss_server")
+
+with (init_data_tab):
+    init_tab = InitManagerTab()
+    init_type, initpts, dim = init_tab.set_page()
+    init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(dim)
+    # st.session_state["names_and_bounds"] = names_and_bounds  # save to session state
+    init_manager = init_tab.set_init_manager(init_type,
+                                             initpts,
+                                             init_bounds,)
+
+
+    def save_df_edits():
+        st.session_state["init_pts"] = st.session_state["init_pts"]
+
+
+    if st.button("Generate points"):
+        if np.isnan(init_bounds).any():
+            st.warning("Error: Please input names and bounds for all variables.")
+        else:
+            init_pts = init_manager.get_all()  # return init points
+            init_df = init_tab.add_var_names(init_pts, st.session_state["names_and_bounds"])
+            # concatenate an empty column for y values and save to session state
+            st.session_state["init_pts"] = init_tab.add_fields_for_y_vals(init_pts,
+                                                                          st.session_state["names_and_bounds"])
+
+    if st.session_state["init_pts"] is not None and not np.isnan(init_bounds).any():
+        # return an editable array
+        edited_df = st.data_editor(st.session_state["init_pts"])
+
+        # save it in session state, this caused the bug of having to input a value twice
+        # st.session_state["init_pts"] = edited_df
+
+        # this df has concatenated bounds which is not shown in UI, only seen when downloaded
+        st.session_state["init_pts_with_bounds"] = init_tab.add_bounds_to_dataframe(edited_df,
+                                                                                    st.session_state["names_and_bounds"])
+        init_tab.download_init_points(st.session_state["init_pts_with_bounds"])
 
 
 def dummy_function(_):
@@ -43,7 +82,7 @@ def dummy_function(_):
 def run_boss():
     bo = BOMain(
         dummy_function,
-        bounds=bounds,
+        bounds=X_bounds,
         yrange=[y_min, y_max],
         kernel="rbf",
         noise=noise_variance,
@@ -57,44 +96,28 @@ def run_boss():
     return result
 
 
-with init_data_tab:
-    init_tab = InitManagerTab()
-    init_type, initpts, dim = init_tab.set_page()
-    init_bounds, names_and_bounds = set_input_var_bounds(dim)
-    init_manager = init_tab.set_init_manager(init_type,
-                                             initpts,
-                                             init_bounds)
-
-    def save_df_edits():
-        st.session_state["init_pts"] = st.session_state["init_pts"]
-
-    if st.button("Generate points"):
-        if np.isnan(init_bounds).any():
-            st.warning("Error: Please input variable names and bounds.")
-        elif st.session_state["init_pts"] is None:
-            init_pts = init_manager.get_all()  # return init points
-            # save init points to session state
-            st.session_state["init_pts"] = init_tab.add_fields_for_y_vals(init_pts, names_and_bounds=names_and_bounds)
-
-    if st.session_state["init_pts"] is not None:
-        # record data in an editable array and in session state
-        st.session_state["init_pts"] = st.data_editor(st.session_state["init_pts"], on_change=save_df_edits)
-        init_tab.download_init_points(st.session_state["init_pts"])
-        st.info("To use Bayesian optimization, please continue in the tab Run BOSS.")
-
-
-with run_tab:
-    st.write("Initial data points: ", st.session_state["init_pts"])
-
+with (run_tab):
     st.markdown(
-        "#### BOSS optimizes using your input data and suggests the next acquisition."
+        "#### BOSS optimizes by using your input data and suggests the next acquisition."
     )
 
-    uploaded_file = upload_file()
-    X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(uploaded_file)
-    y_min, y_max = set_y_range(y_values=Y_vals, y_name=Y_name)
-    bounds = input_x_bounds(X_names)
+    X_vals = []
+    X_names = []
+    X_bounds = []
+    Y_vals = []
+    y_min, y_max = (float, float)
 
+    if st.session_state["init_pts"] is not None and not np.isnan(init_bounds).any():
+        # edited_df = st.data_editor(st.session_state["init_pts"])
+        X_vals, X_names, Y_vals, X_bounds, y_min, y_max = parse_data_and_bounds(
+            st.session_state["init_pts_with_bounds"], dim)
+    else:
+        uploaded_file = upload_file()
+        X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(uploaded_file)
+        y_min, y_max = set_y_range(y_values=Y_vals, y_name=Y_name)
+        X_bounds = input_x_bounds(X_names)
+
+    # Input fields for minimize/maximize and noise variance
     col1, col2 = st.columns(2)
     with col1:
         min_or_max = st.selectbox(
@@ -109,7 +132,17 @@ with run_tab:
         )
 
     if st.button("Run BOSS"):
-        if np.isnan(bounds).any():
+        # Run with generated initial points
+        if st.session_state["init_pts"] is not None:
+            try:
+                res = run_boss()
+                display_result(res, min_or_max, X_names)
+                display_next_acq(res, X_names)
+            except ValueError:
+                st.error("Error: Have you input all required fields?")
+
+        # Run with an arbitrary file
+        elif st.session_state["init_pts"] is None and not np.isnan(X_bounds).any():
             try:
                 res = run_boss()
                 display_result(res, min_or_max, X_names)
