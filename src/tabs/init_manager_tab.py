@@ -29,7 +29,7 @@ def set_input_var_bounds(dimension) -> (np.array, dict):
     Return an array of bounds and a dictionary of variable names and corresponding bounds.
     :param dimension:
     :return:
-    bounds: this is used to generate init points with InitManager.
+    bounds: this is used to generate initial points with InitManager.
     names_and_bounds: a dictionary of variable names and corresponding bounds.
     """
     bounds = np.ones(shape=(dimension, 2)) * np.nan
@@ -139,25 +139,10 @@ class InitManagerTab:
         return xy_data
 
     @staticmethod
-    def add_fields_for_y_vals(init_array, names_and_bounds):
-        """
-        Return a dataframe of initial points concatenated with an empty column for target values.
-        :param init_array:
-        :param names_and_bounds:
-        :return:
-        """
-        var_names = names_and_bounds.keys()
-        y_vals = np.ones(shape=(init_array.shape[0], 1)) * np.nan
-        xy_data = np.concatenate((init_array, y_vals), axis=1)  # concatenate a column to record y_vals
-        df = pd.DataFrame(data=xy_data,
-                          columns=var_names
-                          )
-        return df
-
-    @staticmethod
+    @st.cache_data(show_spinner=False)
     def add_var_names(init_arr, names_and_bounds):
         """
-
+        Return a dataframe with tabulated variable names and corresponding bounds.
         :param init_arr: numpy array of initial points.
         :param names_and_bounds: dictionary
         :return:
@@ -166,8 +151,10 @@ class InitManagerTab:
         if "" in var_names:
             st.error("Please give a name for each variable.")
         else:
-            df = pd.DataFrame(data=init_arr,
-                              columns=var_names[:-1]
+            y_vals = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
+            xy_data = np.concatenate((init_arr, y_vals), axis=1)  # concatenate a column to record y_vals
+            df = pd.DataFrame(data=xy_data,
+                              columns=var_names
                               )
             return df
 
@@ -201,14 +188,13 @@ class InitManagerTab:
         for n in range(dimension):
             df_col_names.append(f"bound {var_names[n]}")  # store column names for the returned df
             bound_n = names_and_bounds.get(var_names[n])
-            # st.write("current bound:", bound_n)
             bounds[0, n] = bound_n[0]
             bounds[1, n] = bound_n[1]
 
         final_array = np.concatenate((init_df, bounds), axis=1)  # concatenate the column containing bounds
-
+        # st.write("column names:", df_col_names)
+        # st.write("test final_array: ", final_array)
         final_df = pd.DataFrame(data=final_array,
                                 columns=df_col_names
                                 )
-        # st.write("test final df: ", final_df)
         return final_df

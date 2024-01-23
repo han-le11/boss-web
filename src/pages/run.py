@@ -23,6 +23,7 @@ if "init_pts_with_bounds" not in st.session_state:
 for k, v in st.session_state.items():
     st.session_state[k] = v
 
+# Set page layout and so on
 page_config = PageConfig(
     main_title="🏃‍♀️ Run BOSS and Post-processing",
     tab_title="Run BOSS",
@@ -39,7 +40,7 @@ test_tab, init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Test tab", "Create initial data", "Run BOSS", "Post-processing"]
 )
 
-with (test_tab):
+with test_tab:
     df = pd.DataFrame(
         [
             {"var": "x", "number": 4, "bool": True},
@@ -49,11 +50,11 @@ with (test_tab):
     )
     edited_df = st.data_editor(df)
 
-with (init_data_tab):
+with init_data_tab:
     init_tab = InitManagerTab()
+    init_tab.add_var_names.clear()
     init_type, initpts, dim = init_tab.set_page()
     init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(dim)
-    # st.session_state["names_and_bounds"] = names_and_bounds  # save to session state
     init_manager = init_tab.set_init_manager(init_type,
                                              initpts,
                                              init_bounds, )
@@ -65,28 +66,21 @@ with (init_data_tab):
 
     if st.button("Generate points"):
         if np.isnan(init_bounds).any():
-            st.warning("Error: Please input names and bounds for all variables.")
+            st.error("Error: Please input names and bounds for all variables.")
         else:
             init_pts = init_manager.get_all()  # return init points
-            init_df = init_tab.add_var_names(init_pts, st.session_state["names_and_bounds"])
             # concatenate an empty column for y values and save to session state
-            st.session_state["init_pts"] = init_tab.add_fields_for_y_vals(init_pts,
-                                                                          st.session_state["names_and_bounds"])
+            st.session_state["init_pts"] = init_tab.add_var_names(init_pts, st.session_state["names_and_bounds"])
 
-    if st.session_state["init_pts"] is not None and not np.isnan(init_bounds).any():
+    if st.session_state["init_pts"] is not None and len(st.session_state["init_pts"].columns) == dim + 1 and not np.isnan(init_bounds).any() and "" not in list(st.session_state["names_and_bounds"].keys()):
         # return an editable array
         edited_df = st.data_editor(st.session_state["init_pts"])
 
-        # save it in session state, this caused the bug of having to input a value twice
-        # st.session_state["init_pts"] = edited_df
-
         # this df has concatenated bounds which is not shown in UI, only seen when downloaded
-        st.session_state["init_pts_with_bounds"] = init_tab.add_bounds_to_dataframe(edited_df,
-                                                                                    st.session_state[
-                                                                                        "names_and_bounds"])
-        init_tab.download_init_points(st.session_state["init_pts_with_bounds"])
+        init_with_bounds = init_tab.add_bounds_to_dataframe(edited_df, st.session_state["names_and_bounds"])
+        init_tab.download_init_points(init_with_bounds)
 
-with (run_tab):
+with run_tab:
     st.markdown(
         "#### BOSS optimizes by using your input data and suggests the next acquisition."
     )
@@ -115,14 +109,13 @@ with (run_tab):
             result = bo.run(X_vals, Y_vals)
         else:
             result = bo.run(X_vals, -Y_vals)
-        st.session_state["bo_result"] = result  # write to session state
+        st.session_state["bo_result"] = result  # write BO result to session state
         return result
 
 
-    if st.session_state["init_pts"] is not None and not np.isnan(init_bounds).any():
-        # edited_df = st.data_editor(st.session_state["init_pts"])
-        X_vals, X_names, Y_vals, X_bounds, y_min, y_max = parse_data_and_bounds(
-            st.session_state["init_pts_with_bounds"], dim)
+    if st.session_state["init_pts"] is not None and len(st.session_state["init_pts"].columns) == dim + 1 and not np.isnan(init_bounds).any() and "" not in list(
+            st.session_state["names_and_bounds"].keys()):
+        X_vals, X_names, Y_vals, X_bounds, y_min, y_max = parse_data_and_bounds(init_with_bounds, dim)
     else:
         uploaded_file = upload_file()
         X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(uploaded_file)
