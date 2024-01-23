@@ -1,12 +1,22 @@
 # Bayesian Optimization Structure Search (BOSS) web app
 
 Prototype development of the web interface for Bayesian Optimization Structure Search (BOSS). 
-This repo currently has two main branches:
+This repository currently has two main branches:
 ```
 main        <- Stable version
 develop     <- For development
 ```
-There are other small feature branches.
+The other branches are for specific features.
+
+## Main structure
+```
+├── src                     <- Source code of the project
+│   ├── pages               <- Other pages 
+│   ├── tabs                <- Tabs for the run page   
+│   ├── ui                  <- UI functions
+│   └── home.py             <- Home page that acts as the entry point
+├── tests                   <- Tests
+```
 
 ## How To Run
 1. Install `virtualenv`:
@@ -34,13 +44,5 @@ $ (env) pip install -r requirements.txt
 $ (env) streamlit run src/home.py
 ```
 
-## Directory structure
-```
-├── src                     <- Source code of the project
-│   ├── pages               <- Other pages 
-│   ├── tabs                <- Tabs for the run page   
-│   ├── ui                  <- UI functions
-│   └── home.py             <- Home page that acts as the entry point
-├── tests                   <- Tests
-```
+
 
