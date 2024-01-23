@@ -33,3 +33,14 @@ $ (env) pip install -r requirements.txt
 ```
 $ (env) streamlit run src/home.py
 ```
+
+## Directory structure
+```
+├── src                     <- Source code of the project
+│   ├── pages               <- Other pages 
+│   ├── tabs                <- Tabs for the run page   
+│   ├── ui                  <- UI functions
+│   └── home.py             <- Home page that acts as the entry point
+├── tests                   <- Tests
+```
+
