@@ -26,10 +26,10 @@ def input_init_points() -> int:
 
 def set_input_var_bounds(dimension) -> (np.array, dict):
     """
-    Return an array of bounds and a dictionary of variable names and corresponding bounds.
+    Return an array of input bounds and a dictionary of variable names and corresponding bounds.
     :param dimension:
     :return:
-    bounds: this is used to generate initial points with InitManager.
+    bounds: input bounds, which is used to generate initial points with InitManager.
     names_and_bounds: a dictionary of variable names and corresponding bounds.
     """
     bounds = np.ones(shape=(dimension, 2)) * np.nan
@@ -41,19 +41,23 @@ def set_input_var_bounds(dimension) -> (np.array, dict):
                 f"Please write the name of variable {d + 1}",
                 max_chars=50,
                 help="A descriptive name will be great!",
-                key=f"var {d}"
+                key=f"var {d}",
             )
 
             if var_name:
                 with col2:
                     bounds[d, 0] = st.number_input(
                         f"Lower bound of {var_name} *",
-                        format="%.4f", key=f"lower {d}", value=None,
+                        format="%.4f",
+                        key=f"lower {d}",
+                        value=None,
                     )
                 with col3:
                     bounds[d, 1] = st.number_input(
                         f"Upper bound of {var_name} *",
-                        format="%.4f", key=f"upper {d}", value=None,
+                        format="%.4f",
+                        key=f"upper {d}",
+                        value=None,
                     )
                 names_and_bounds.update({var_name: bounds[d, :]})
 
@@ -64,7 +68,7 @@ def set_input_var_bounds(dimension) -> (np.array, dict):
             max_chars=50,
             help="A descriptive name will be great!",
         )
-    names_and_bounds[y_val_name] = None  # for target values, bound values are assigned None
+    names_and_bounds[y_val_name] = None  # for target values, bounds are assigned None
     return bounds, names_and_bounds
 
 
@@ -135,7 +139,8 @@ class InitManagerTab:
         if bounds.size != 0:
             for b in bounds:
                 y_vals[b] = st.number_input(f"Target value for {b}")
-        xy_data = np.concatenate((bounds, y_vals), axis=1)  # concatenate to a new column
+        # concatenate to a new column
+        xy_data = np.concatenate((bounds, y_vals), axis=1)
         return xy_data
 
     @staticmethod
@@ -152,10 +157,9 @@ class InitManagerTab:
             st.error("Please give a name for each variable.")
         else:
             y_vals = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
-            xy_data = np.concatenate((init_arr, y_vals), axis=1)  # concatenate a column to record y_vals
-            df = pd.DataFrame(data=xy_data,
-                              columns=var_names
-                              )
+            # concatenate a column to record y_vals
+            xy_data = np.concatenate((init_arr, y_vals), axis=1)
+            df = pd.DataFrame(data=xy_data, columns=var_names)
             return df
 
     @staticmethod
@@ -186,15 +190,14 @@ class InitManagerTab:
         bounds = np.zeros(shape=(num_init_points, dimension)) * np.nan
 
         for n in range(dimension):
-            df_col_names.append(f"bound {var_names[n]}")  # store column names for the returned df
+            df_col_names.append(
+                f"bound {var_names[n]}"
+            )  # store column names for the returned df
             bound_n = names_and_bounds.get(var_names[n])
             bounds[0, n] = bound_n[0]
             bounds[1, n] = bound_n[1]
 
-        final_array = np.concatenate((init_df, bounds), axis=1)  # concatenate the column containing bounds
-        # st.write("column names:", df_col_names)
-        # st.write("test final_array: ", final_array)
-        final_df = pd.DataFrame(data=final_array,
-                                columns=df_col_names
-                                )
+        # concatenate the column containing bounds
+        final_array = np.concatenate((init_df, bounds), axis=1)
+        final_df = pd.DataFrame(data=final_array, columns=df_col_names)
         return final_df
