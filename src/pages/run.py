@@ -18,8 +18,6 @@ if "names_and_bounds" not in st.session_state:
     st.session_state["names_and_bounds"] = None
 if "init_pts" not in st.session_state:
     st.session_state["init_pts"] = None
-if "init_pts_with_bounds" not in st.session_state:
-    st.session_state["init_pts_with_bounds"] = None
 for k, v in st.session_state.items():
     st.session_state[k] = v
 
@@ -36,6 +34,7 @@ page_config.set_header()
 customize_footer()
 remove_toggles()
 
+# Create tabs
 test_tab, init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Test tab", "Create initial data", "Run BOSS", "Post-processing"]
 )
@@ -55,29 +54,36 @@ with init_data_tab:
     init_tab.add_var_names.clear()
     init_type, initpts, dim = init_tab.set_page()
     init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(dim)
-    init_manager = init_tab.set_init_manager(init_type,
-                                             initpts,
-                                             init_bounds, )
-
-
-    def save_df_edits():
-        st.session_state["init_pts"] = st.session_state["init_pts"]
-
+    init_manager = init_tab.set_init_manager(
+        init_type,
+        initpts,
+        init_bounds,
+    )
 
     if st.button("Generate points"):
         if np.isnan(init_bounds).any():
             st.error("Error: Please input names and bounds for all variables.")
         else:
-            init_pts = init_manager.get_all()  # return init points
-            # concatenate an empty column for y values and save to session state
-            st.session_state["init_pts"] = init_tab.add_var_names(init_pts, st.session_state["names_and_bounds"])
+            # return init points
+            init_pts = init_manager.get_all()
+            # concatenate an empty column for target values and save to session state
+            st.session_state["init_pts"] = init_tab.add_var_names(
+                init_pts, st.session_state["names_and_bounds"]
+            )
 
-    if st.session_state["init_pts"] is not None and len(st.session_state["init_pts"].columns) == dim + 1 and not np.isnan(init_bounds).any() and "" not in list(st.session_state["names_and_bounds"].keys()):
+    if (
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
+    ):
         # return an editable array
         edited_df = st.data_editor(st.session_state["init_pts"])
 
         # this df has concatenated bounds which is not shown in UI, only seen when downloaded
-        init_with_bounds = init_tab.add_bounds_to_dataframe(edited_df, st.session_state["names_and_bounds"])
+        init_with_bounds = init_tab.add_bounds_to_dataframe(
+            edited_df, st.session_state["names_and_bounds"]
+        )
         init_tab.download_init_points(init_with_bounds)
 
 with run_tab:
@@ -91,10 +97,8 @@ with run_tab:
     Y_vals = []
     y_min, y_max = (float, float)
 
-
     def dummy_function(_):
         pass
-
 
     def run_boss():
         bo = BOMain(
@@ -112,10 +116,15 @@ with run_tab:
         st.session_state["bo_result"] = result  # write BO result to session state
         return result
 
-
-    if st.session_state["init_pts"] is not None and len(st.session_state["init_pts"].columns) == dim + 1 and not np.isnan(init_bounds).any() and "" not in list(
-            st.session_state["names_and_bounds"].keys()):
-        X_vals, X_names, Y_vals, X_bounds, y_min, y_max = parse_data_and_bounds(init_with_bounds, dim)
+    if (
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
+    ):
+        X_vals, X_names, Y_vals, X_bounds, y_min, y_max = parse_data_and_bounds(
+            init_with_bounds, dim
+        )
     else:
         uploaded_file = upload_file()
         X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(uploaded_file)
@@ -163,7 +172,7 @@ with run_tab:
             st.error("Error: Have you input all required fields?")
 
 with postprocess_tab:
-    st.markdown("#### Get plots and data files after optimizing with BOSS.")
+    st.markdown("####Get plots and data files after optimizing with BOSS.")
 
     if st.session_state["bo_result"] is not None:
         display_result(st.session_state["bo_result"], min_or_max, X_names)
