@@ -1,4 +1,4 @@
-aalto-boss==1.8.0
+aalto-boss==1.9.1
 attrs==22.2.0
 cachetools==5.3.0
 Cython==0.29.34
@@ -11,10 +11,10 @@ Jinja2==3.1.2
 jsonschema==4.17.3
 matplotlib==3.7.1
 mdurl==0.1.2
-numpy~=1.23.5
+numpy>=1.20
 packaging==23.0
 pandas~=1.5.3
-paramz==0.9.5
+paramz>=0.9.6
 Pillow~=9.5.0
 pyrsistent==0.19.3
 python-dateutil==2.8.2
@@ -22,8 +22,9 @@ pytz==2023.3
 pytz-deprecation-shim==0.1.0.post0
 requests==2.28.2
 scipy==1.10.1
-streamlit~=1.27.2
+streamlit~=1.30.0
 toml==0.10.2
 toolz==0.12.0
 tornado==6.3
 typing_extensions==4.5.0
+pytest~=7.4.0
