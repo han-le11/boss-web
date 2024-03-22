@@ -14,14 +14,12 @@ def upload_file():
         type=["csv"],
         help="Your file should contain data for input variables and target variable",
     )
-    if file is not None and isinstance(file, UploadedFile):
+    if isinstance(file, UploadedFile):
         try:
             df = pd.read_csv(file, sep=":|;|,")
             return df
         except ValueError as err:
             st.error("Error: " + str(err) + ". Please check the file contents and re-upload.")
-    else:
-        raise ValueError("Please provide a single csv file.")
 
 
 def check_if_there_are_bounds(df) -> bool:
@@ -37,16 +35,15 @@ def check_if_there_are_bounds(df) -> bool:
             # get a list of bound names
             bound_names = [k for k in list(df.columns) if 'boss-bound' in k]
             if len(bound_names) != 0:
-                #  and len(bound_names) == len(X_names)
                 bounds_exist = True
     return bounds_exist
 
 
 def parse_bounds(df):
     """
-    Return the variable names and bounds for BOMain object.
+    Return the variable names and bounds to run with BOMain object.
     :param df: Uploaded file, which is read into a dataframe.
-    :return:
+    :return: numpy array of the bounds
     """
     if df is not None:
         bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
@@ -58,17 +55,14 @@ def parse_bounds(df):
 def extract_col_data(df: pd.DataFrame, keyword: str) -> np.array:
     """
     Get the column(s) whose name contains the given keyword.
-    :param df:
-    :param keyword:
-    :return:
+    :param df: Uploaded file, which is read into a dataframe.
+    :param keyword: the keyword that the column name should contain.
+    :return: numpy array of the column(s) whose name contains the given keyword.
     """
     array = df.filter(regex=keyword).to_numpy()
+    if array.size == 0:
+        array = np.array([])
     return array
-
-
-# TODO
-def display_placeholder_text_in_multiselect_box():
-    pass
 
 
 def choose_inputs_and_outputs(df):
