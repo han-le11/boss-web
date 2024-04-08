@@ -1,14 +1,22 @@
 # Bayesian Optimization Structure Search (BOSS) web app
 
 Prototype development of the web interface for Bayesian Optimization Structure Search (BOSS). 
-This repo currently has two branches:
+This repository currently has two main branches:
 ```
 main        <- Stable version
-develop     <- For development of new features 
+develop     <- For development
 ```
-## Jira board links
-[Tasks to do, in progress, in review, and done](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1?selectedIssue=BOSS-5&atlOrigin=eyJpIjoiNTM3NDI5MzFkM2RhNGY2N2IyODBlYzE3YjllNGQyM2IiLCJwIjoiaiJ9)\
-[Project Backlog](https://cest-boss.atlassian.net/jira/software/c/projects/BOSS/boards/1/backlog?atlOrigin=eyJpIjoiMGUyZjlmNmI0ZTUxNDY0NThhMWE0YTdmMWEyNjkxZmUiLCJwIjoiaiJ9)
+The other branches are for specific features.
+
+## Main structure
+```
+├── src                     <- Source code of the project
+│   ├── pages               <- Other pages 
+│   ├── tabs                <- Tabs for the run page   
+│   ├── ui                  <- UI functions
+│   └── home.py             <- Home page that acts as the entry point
+├── tests                   <- Tests
+```
 
 ## How To Run
 1. Install `virtualenv`:
@@ -35,3 +43,6 @@ $ (env) pip install -r requirements.txt
 ```
 $ (env) streamlit run src/home.py
 ```
+
+
+
