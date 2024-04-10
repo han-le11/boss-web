@@ -4,9 +4,15 @@ from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
+from ui.boss_run_params import input_X_bounds
 from ui.page_config import PageConfig, customize_footer, remove_toggles
-from ui.boss_run_params import input_x_bounds, parse_data_and_bounds
-from ui.file_handler import upload_file, check_if_there_are_bounds, parse_bounds, choose_inputs_and_outputs, extract_col_data
+from ui.file_handler import (
+    upload_file,
+    check_if_there_are_bounds,
+    parse_bounds,
+    choose_inputs_and_outputs,
+    extract_col_data,
+)
 from ui.result_displayer import display_result, display_next_acq
 
 # Initialization of session_state
@@ -53,7 +59,6 @@ with init_data_tab:
                 initpts,
                 init_bounds,
             )
-            # return init points
             init_pts = init_manager.get_all()
             # concatenate an empty column for target values and save to session state
             st.session_state["init_pts"] = init_tab.add_var_names(
@@ -61,10 +66,10 @@ with init_data_tab:
             )
 
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         # return an editable array
         edited_df = st.data_editor(st.session_state["init_pts"])
@@ -80,13 +85,10 @@ with run_tab:
         "#### BOSS optimizes by using your input data and suggests the next acquisition."
     )
 
-
     def dummy_function(_):
         pass
 
-
     def run_boss(func, X_ranges, in_vals, out_vals, kernel, noise_var):
-        st.write("Bounds given to BOSS:", X_ranges)
         bo = BOMain(
             f=func,
             bounds=X_ranges,
@@ -101,32 +103,37 @@ with run_tab:
         st.session_state["bo_result"] = result  # write BO result to session state
         return result
 
-
     # Parse data immediately from generated initial points
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
-        init_X_vals, X_names, init_Y_vals, init_X_bounds = parse_data_and_bounds(
-            init_with_bounds, dim
-        )
+        st.write(init_with_bounds)
+        X_bounds = parse_bounds(init_with_bounds)
+        X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
+        Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
+        X_names = list(init_with_bounds.columns)[:dim]
 
     # Display file uploader widget
     else:
         df_file = upload_file()
         bounds_exist = check_if_there_are_bounds(df_file)
-        if bounds_exist:
-            init_X_bounds = parse_bounds(df_file)
-            init_X_vals = extract_col_data(df=df_file, keyword="input-var")
-            init_Y_vals = extract_col_data(df=df_file, keyword="output-var")
-        else:
-            # Display widgets to choose variable names
-            X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(df_file)
-            X_bounds = input_x_bounds(X_names)
 
-    # Input fields for minimize/maximize and noise variance
+        # Parse bounds from the uploaded file
+        if bounds_exist:
+            X_names = list(df_file.columns)[:dim]
+            X_bounds_from_file = parse_bounds(df_file)
+            X_bounds = input_X_bounds(X_names, X_bounds_from_file)
+            X_vals = extract_col_data(df=df_file, keyword="input-var")
+            Y_vals = extract_col_data(df=df_file, keyword="output-var")
+        else:
+            # Manually set variable names and bounds
+            X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(df_file)
+            X_bounds = input_X_bounds(X_names)
+
+    # Choose minimize/maximize and noise variance
     col1, col2 = st.columns(2)
     with col1:
         min_or_max = st.selectbox(
@@ -136,44 +143,25 @@ with run_tab:
         noise_variance = st.number_input(
             "Noise variance",
             min_value=0.0,
-            format="%.7f",
+            format="%.5f",
             help="Estimated variance for the Gaussian noise",
         )
 
     if st.button("Run BOSS"):
-        # Run with generated initial points
-        if st.session_state["init_pts"] is not None or bounds_exist:
-            # try:
-                res = run_boss(func=dummy_function,
-                               X_ranges=init_X_bounds,
-                               kernel="rbf",
-                               in_vals=init_X_vals,
-                               out_vals=init_Y_vals,
-                               noise_var=noise_variance,)
-                display_result(res, min_or_max, X_names)
-                display_next_acq(res, X_names)
-            # except ValueError:
-            #     st.error("Error: Have you input all required fields?")
-
-        # Run with an arbitrary file
-        elif st.session_state["init_pts"] is None and not bounds_exist:  # np.isnan(X_bounds).any()
-            try:
-                res = run_boss(func=dummy_function,
-                               X_ranges=X_bounds,
-                               in_vals=X_vals,
-                               out_vals=Y_vals,
-                               kernel="rbf",
-                               noise_var=noise_variance,)
-                display_result(res, min_or_max, X_names)
-                display_next_acq(res, X_names)
-            # except AssertionError:
-            #     st.error(
-            #         "Error: Have you input all required fields? "
-            #         "Make sure that the lower bound of a variable is smaller than its upper bound."
-            #     )
-            except ValueError:
-                st.error("Error: Have you input all required fields?")
-        else:
+        # Run with generated initial points or uploaded file
+        # if st.session_state["init_pts"] is not None:
+        try:
+            res = run_boss(
+                func=dummy_function,
+                X_ranges=X_bounds,
+                in_vals=X_vals,
+                out_vals=Y_vals,
+                kernel="rbf",
+                noise_var=noise_variance,
+            )
+            display_result(res, min_or_max, X_names)
+            display_next_acq(res, X_names)
+        except ValueError:
             st.error("Error: Have you input all required fields?")
 
 with postprocess_tab:
@@ -186,8 +174,6 @@ with postprocess_tab:
         col1, col2 = st.columns(2)
         with col1:
             pp_iters = pp.input_pp_iters()
-
-        # plot_models_or_not = pp.plot_models_or_not()
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
 
         if st.button("Run post-processing"):
