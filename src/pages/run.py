@@ -2,7 +2,6 @@ import numpy as np
 import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
-from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 from ui.boss_run_params import input_x_bounds, parse_data_and_bounds
@@ -187,7 +186,6 @@ with postprocess_tab:
         with col1:
             pp_iters = pp.input_pp_iters()
 
-        # plot_models_or_not = pp.plot_models_or_not()
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
 
         if st.button("Run post-processing"):
