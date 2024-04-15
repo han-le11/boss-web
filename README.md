@@ -3,8 +3,8 @@
 Prototype development of the web interface for Bayesian Optimization Structure Search (BOSS). 
 This repository currently has two main branches:
 ```
-main        <- Stable version
-develop     <- For development
+main        <- Stable version for (future) production
+develop     <- For development and demo
 ```
 The other branches are for specific features.
 
