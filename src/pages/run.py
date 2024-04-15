@@ -5,7 +5,6 @@ from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from ui.boss_run_params import input_X_bounds
-from ui.page_config import PageConfig, customize_footer, remove_toggles
 from ui.file_handler import (
     upload_file,
     check_if_there_are_bounds,
@@ -13,6 +12,7 @@ from ui.file_handler import (
     choose_inputs_and_outputs,
     extract_col_data,
 )
+from ui.page_config import PageConfig, customize_footer, remove_toggles
 from ui.result_displayer import display_result, display_next_acq
 
 # Initialization of session_state
@@ -66,10 +66,10 @@ with init_data_tab:
             )
 
     if (
-        st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == dim + 1
-        and not np.isnan(init_bounds).any()
-        and "" not in list(st.session_state["names_and_bounds"].keys())
+            st.session_state["init_pts"] is not None
+            and len(st.session_state["init_pts"].columns) == dim + 1
+            and not np.isnan(init_bounds).any()
+            and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         # return an editable array
         edited_df = st.data_editor(st.session_state["init_pts"])
@@ -85,8 +85,10 @@ with run_tab:
         "#### BOSS optimizes by using your input data and suggests the next acquisition."
     )
 
+
     def dummy_function(_):
         pass
+
 
     def run_boss(func, X_ranges, in_vals, out_vals, kernel, noise_var):
         bo = BOMain(
@@ -103,14 +105,14 @@ with run_tab:
         st.session_state["bo_result"] = result  # write BO result to session state
         return result
 
+
     # Parse data immediately from generated initial points
     if (
-        st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == dim + 1
-        and not np.isnan(init_bounds).any()
-        and "" not in list(st.session_state["names_and_bounds"].keys())
+            st.session_state["init_pts"] is not None
+            and len(st.session_state["init_pts"].columns) == dim + 1
+            and not np.isnan(init_bounds).any()
+            and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
-        st.write(init_with_bounds)
         X_bounds = parse_bounds(init_with_bounds)
         X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
         Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
@@ -124,6 +126,8 @@ with run_tab:
         # Parse bounds from the uploaded file
         if bounds_exist:
             X_names = list(df_file.columns)[:dim]
+            data = df_file.iloc[:, :-2]
+            st.write(data)
             X_bounds_from_file = parse_bounds(df_file)
             X_bounds = input_X_bounds(X_names, X_bounds_from_file)
             X_vals = extract_col_data(df=df_file, keyword="input-var")

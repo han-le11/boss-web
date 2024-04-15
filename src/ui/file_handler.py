@@ -47,9 +47,8 @@ def parse_bounds(df):
     """
     if df is not None:
         bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
-        transpose_bounds_array = np.transpose(bounds_array)
-        st.write("Found bounds: ", transpose_bounds_array)
-        return transpose_bounds_array
+        tp_bounds_array = np.transpose(bounds_array)
+        return tp_bounds_array
 
 
 def extract_col_data(df: pd.DataFrame, keyword: str) -> np.array:

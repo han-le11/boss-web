@@ -53,7 +53,6 @@ def input_X_bounds(X_names: list[str], lower_and_upper_bounds=None) -> np.ndarra
     dimension = len(X_names)
     bounds = np.empty(shape=(dimension, 2))
     if X_names:
-        st.write("Dimension of the search space is", dimension)
         for d in range(dimension):
             lower_and_upper = np.array([0.0, 0.0]) if lower_and_upper_bounds is None else lower_and_upper_bounds[d]
             lower_bound, upper_bound = _display_input_widgets_X_bounds(X_names, d, lower_and_upper)
