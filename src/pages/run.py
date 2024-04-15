@@ -2,9 +2,10 @@ import numpy as np
 import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
+from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from ui.page_config import PageConfig, customize_footer, remove_toggles
-from ui.boss_run_params import input_x_bounds, parse_data_and_bounds
+from ui.boss_run_params import input_x_bounds
 from ui.file_handler import upload_file, check_if_there_are_bounds, parse_bounds, choose_inputs_and_outputs, extract_col_data
 from ui.result_displayer import display_result, display_next_acq
 
