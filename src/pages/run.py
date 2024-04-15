@@ -2,6 +2,7 @@ import numpy as np
 import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
+from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from ui.boss_run_params import input_X_bounds
 from ui.file_handler import (
