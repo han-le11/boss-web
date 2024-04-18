@@ -1,21 +1,24 @@
 # Bayesian Optimization Structure Search (BOSS) web app
 
-Prototype development of the web interface for Bayesian Optimization Structure Search (BOSS). 
-This repository currently has two main branches:
+Prototype development of a multipage web app for Bayesian Optimization Structure Search (BOSS). 
+Code documentation of BOSS can be found [here](https://cest-group.gitlab.io/boss/).
+
+This web app repository currently has two main branches:
 ```
 main        <- Stable version for (future) production
 develop     <- For development and demo
 ```
-The other branches are for specific features.
+The other feature branches are for specific features.
 
 ## Main structure
 ```
 ├── src                     <- Source code of the project
-│   ├── pages               <- Other pages 
+│   ├── pages               <- Pages other than the homepage
 │   ├── tabs                <- Tabs for the run page   
 │   ├── ui                  <- UI functions
-│   └── home.py             <- Home page that acts as the entry point
+│   └── home.py             <- Homepage that acts as the entry point
 ├── tests                   <- Tests
+├── doc                     <- Documentation
 ```
 
 ## How To Run
