@@ -1,7 +1,8 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import unittest
-from src.ui.file_handler import check_if_there_are_bounds, extract_col_data, parse_bounds
+from unittest.mock import patch
+from src.ui.file_handler import check_if_there_are_bounds, choose_inputs_and_outputs, extract_col_data, parse_bounds
 
 
 class TestCheckIfThereAreBounds(unittest.TestCase):
@@ -51,6 +52,23 @@ class TestExtractColData(unittest.TestCase):
         keyword = 'test'
         result = extract_col_data(df, keyword)
         self.assertTrue(np.array_equal(result, np.array([])))
+
+
+class TestChooseInputsAndOutputs(unittest.TestCase):
+
+    @patch('streamlit.columns')
+    @patch('streamlit.multiselect')
+    @patch('streamlit.expander')
+    def test_choose_inputs_and_outputs_with_none_df(self,
+                                                    mock_expander,
+                                                    mock_multiselect,
+                                                    mock_columns):
+        df = None
+        X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(df)
+        self.assertEqual(X_vals, [])
+        self.assertEqual(Y_vals, [])
+        self.assertEqual(X_names, [])
+        self.assertEqual(Y_name, [])
 
 
 if __name__ == '__main__':
