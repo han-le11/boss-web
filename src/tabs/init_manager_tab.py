@@ -4,7 +4,7 @@ import streamlit as st
 from boss.bo.initmanager import InitManager
 
 
-def set_input_var_bounds(dimension) -> (np.array, dict):
+def set_input_var_bounds(dimension: int) -> (np.array, dict):
     """
     Return an array of input bounds and a dictionary of variable names and corresponding bounds.
     :param dimension: dimension of the input values
@@ -63,7 +63,6 @@ class InitManagerTab:
 
     @staticmethod
     def set_page():
-        st.warning("This tab is under development.", icon="⚠️")
         st.markdown(
             "#### If you have not had any data, create initial data points here."
         )
@@ -152,20 +151,16 @@ class InitManagerTab:
             st.error("Please give a name for each variable.")
         else:
             var_names = [s for s in list(names_and_bounds.keys())]
-
             dimension = len(var_names) - 1
             num_init_points = init_df.shape[0]
             bounds = np.zeros(shape=(num_init_points, dimension)) * np.nan
-
-            # store column names for the final df
-            df_col_names = var_names
+            df_col_names = var_names  # store column names for the final df
 
             for n in range(dimension):
                 cur_var = var_names[n].removeprefix("input-var ")
                 df_col_names.append(
                     f"boss-bound {cur_var}"
                 )  # store column names for the returned df
-
                 bound_n = names_and_bounds.get(var_names[n])
                 bounds[0, n] = bound_n[0]
                 bounds[1, n] = bound_n[1]

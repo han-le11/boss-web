@@ -2,21 +2,21 @@ import numpy as np
 import pandas as pd
 import unittest
 from unittest.mock import patch
-from src.ui.file_handler import check_if_there_are_bounds, choose_inputs_and_outputs, extract_col_data, parse_bounds
+from src.ui.file_handler import find_bounds, choose_inputs_and_outputs, extract_col_data, parse_bounds
 
 
-class TestCheckIfThereAreBounds(unittest.TestCase):
+class TestFindBounds(unittest.TestCase):
     def test_none_df(self):
         df = None
-        self.assertFalse(check_if_there_are_bounds(df))
+        self.assertFalse(find_bounds(df))
 
     def test_no_bounds(self):
         df = pd.DataFrame({'col1': [1, 2, 3], 'col2': [4, 5, 6]})
-        self.assertFalse(check_if_there_are_bounds(df))
+        self.assertFalse(find_bounds(df))
 
     def test_with_bounds(self):
         df = pd.DataFrame({'boss-bound-x': [1, 2, 3], 'col2': [4, 5, 6]})
-        self.assertTrue(check_if_there_are_bounds(df))
+        self.assertTrue(find_bounds(df))
 
 
 class TestParseBounds(unittest.TestCase):

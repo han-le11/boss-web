@@ -14,7 +14,7 @@ def _check_bounds(lower_bound, upper_bound):
         st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
 
 
-def _display_input_widgets_X_bounds(X_names: list[str], dim: int, lower_and_upper_bounds=None) -> (float, float):
+def _display_input_widgets_X_bounds(X_names: list[str], dim: int, lower_and_upper_bounds: np.ndarray = None) -> (float, float):
     """
     Function to prompt the user to input lower and upper bounds for a variable.
 
@@ -42,7 +42,7 @@ def _display_input_widgets_X_bounds(X_names: list[str], dim: int, lower_and_uppe
     return lower_bound, upper_bound
 
 
-def input_X_bounds(X_names: list[str], lower_and_upper_bounds=None) -> np.ndarray:
+def input_X_bounds(X_names: list[str], lower_and_upper_bounds: np.ndarray = None) -> np.ndarray:
     """
     Display the number input widgets based on the dimension and input variable names.
 
