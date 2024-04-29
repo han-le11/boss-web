@@ -1,13 +1,13 @@
 import numpy as np
 import streamlit as st
-from boss.bo.bo_main import BOMain
 from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
+from tabs.run_boss import RunBOSS
 from ui.boss_run_params import input_X_bounds
 from ui.file_handler import (
     upload_file,
-    check_if_there_are_bounds,
+    find_bounds,
     parse_bounds,
     choose_inputs_and_outputs,
     extract_col_data,
@@ -15,7 +15,9 @@ from ui.file_handler import (
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 from ui.result_displayer import display_result, display_next_acq
 
-# Initialization of session_state
+# Initialization of session states
+if "data" not in st.session_state:
+    st.session_state["data"] = None
 if "bo_result" not in st.session_state:
     st.session_state["bo_result"] = None
 if "names_and_bounds" not in st.session_state:
@@ -66,10 +68,10 @@ with init_data_tab:
             )
 
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         # return an editable array
         edited_df = st.data_editor(st.session_state["init_pts"])
@@ -80,71 +82,53 @@ with init_data_tab:
         )
         init_tab.download_init_points(init_with_bounds)
 
+
 with run_tab:
-    st.markdown(
-        "#### BOSS optimizes by using your input data and suggests the next acquisition."
-    )
-
-
-    def dummy_function(_):
-        pass
-
-
-    def run_boss(func, X_ranges, in_vals, out_vals, kernel, noise_var):
-        bo = BOMain(
-            f=func,
-            bounds=X_ranges,
-            kernel=kernel,
-            noise=noise_var,
-            iterpts=0,
-        )
-        if min_or_max == "Minimize":
-            result = bo.run(in_vals, out_vals)
-        else:
-            result = bo.run(in_vals, -out_vals)
-        st.session_state["bo_result"] = result  # write BO result to session state
-        return result
-
+    file = upload_file()  # uploaded file
+    bounds_from_file = None
+    run = RunBOSS()
 
     # Parse data immediately from generated initial points
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
-        X_bounds = parse_bounds(init_with_bounds)
-        X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
-        Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
-        X_names = list(init_with_bounds.columns)[:dim]
+        run.data = init_with_bounds.copy(deep=True).iloc[:, :-2]
+        run.X_names = list(init_with_bounds.columns)[:dim]
+        bounds_from_file = parse_bounds(init_with_bounds)
+        run.X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
+        run.Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
 
-    # Display file uploader widget
-    else:
-        df_file = upload_file()
-        bounds_exist = check_if_there_are_bounds(df_file)
-
+    elif st.session_state["init_pts"] is None and file is not None:
+        run.bounds_exist = find_bounds(file)
+        st.write(run.bounds_exist)
         # Parse bounds from the uploaded file
-        if bounds_exist:
-            X_names = list(df_file.columns)[:dim]
-            data = df_file.iloc[:, :-2]
-            st.write(data)
-            X_bounds_from_file = parse_bounds(df_file)
-            X_bounds = input_X_bounds(X_names, X_bounds_from_file)
-            X_vals = extract_col_data(df=df_file, keyword="input-var")
-            Y_vals = extract_col_data(df=df_file, keyword="output-var")
+        if run.bounds_exist:
+            run.X_names = list(file.columns)[:dim]
+            run.data = file.iloc[:, :-2]
+            bounds_from_file = parse_bounds(file)
+            run.X_vals = extract_col_data(df=file, keyword="input-var")
+            run.Y_vals = extract_col_data(df=file, keyword="output-var")
+
+        # File doesn't have bounds. Manually set variable names and bounds
         else:
-            # Manually set variable names and bounds
-            X_vals, Y_vals, X_names, Y_name = choose_inputs_and_outputs(df_file)
-            X_bounds = input_X_bounds(X_names)
+            run.X_vals, run.Y_vals, run.X_names, run.Y_name = choose_inputs_and_outputs(file)
+            run.data = file[run.X_names + run.Y_name]
+
+    if run.data is not None:
+        st.write(run.data)
+        run.bounds = input_X_bounds(run.X_names, bounds_from_file)
 
     # Choose minimize/maximize and noise variance
     col1, col2 = st.columns(2)
     with col1:
-        min_or_max = st.selectbox(
+        run.min_or_max = st.selectbox(
             "Minimize or maximize the target value?", options=("Minimize", "Maximize")
         )
     with col2:
-        noise_variance = st.number_input(
+        run.noise = st.number_input(
             "Noise variance",
             min_value=0.0,
             format="%.5f",
@@ -152,35 +136,23 @@ with run_tab:
         )
 
     if st.button("Run BOSS"):
-        # Run with generated initial points or uploaded file
-        # if st.session_state["init_pts"] is not None:
-        try:
-            res = run_boss(
-                func=dummy_function,
-                X_ranges=X_bounds,
-                in_vals=X_vals,
-                out_vals=Y_vals,
-                kernel="rbf",
-                noise_var=noise_variance,
-            )
-            display_result(res, min_or_max, X_names)
-            display_next_acq(res, X_names)
-        except ValueError:
-            st.error("Error: Have you input all required fields?")
+        if st.session_state["init_pts"] is not None or file is not None:
+            run.res = run.run_boss()
+            run.display_result()
+            display_next_acq(run.res, run.X_names)
 
 with postprocess_tab:
     st.markdown("Get plots and data files after optimizing with BOSS.")
 
     if st.session_state["bo_result"] is not None:
-        display_result(st.session_state["bo_result"], min_or_max, X_names)
-        pp = PostprocessingTab(st.session_state["bo_result"], X_names)
+        display_result(st.session_state["bo_result"], run.min_or_max, run.X_names)
+        pp = PostprocessingTab(st.session_state["bo_result"], run.X_names)
 
         col1, col2 = st.columns(2)
         with col1:
             pp_iters = pp.input_pp_iters()
 
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
-
         if st.button("Run post-processing"):
             try:
                 post = PPMain(
