@@ -10,16 +10,16 @@ def dummy_func(_):
 
 class RunBOSS:
     def __init__(
-        self,
-        data=None,
-        bounds=None,
-        bounds_exist=False,
-        X_vals=None,
-        Y_vals=None,
-        X_names=None,
-        min_or_max=None,
-        noise=None,
-        res=None,
+            self,
+            data=None,
+            bounds=None,
+            bounds_exist=False,
+            X_vals=None,
+            Y_vals=None,
+            X_names=None,
+            min_or_max=None,
+            noise=None,
+            res=None,
     ):
         self.data = data
         self.bounds = bounds
@@ -90,6 +90,20 @@ class RunBOSS:
                         f"Predicted global minimum: {mu_glmin} at {self.X_names} = {x_glmin}",
                         icon="✅",
                     )
+
+    def display_next_acq(self) -> None:
+        """
+        Get and display the next acquisition location suggested by BOSS.
+        """
+        x_next = self.res.get_next_acq(-1)
+        x_next = np.around(x_next, decimals=4)
+        if self.X_names:
+            pairs = dict(zip(self.X_names, x_next))
+            for key, value in pairs.items():
+                st.success(
+                    f"Next acquisition: \n" f"{key} at {value}",
+                    icon="🔍",
+                )
 
     def _get_next_acq(self):
         if self.res is not None:

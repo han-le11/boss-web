@@ -13,7 +13,6 @@ from ui.file_handler import (
     extract_col_data,
 )
 from ui.page_config import PageConfig, customize_footer, remove_toggles
-from ui.result_displayer import display_result, display_next_acq
 
 # Initialization of session states
 if "data" not in st.session_state:
@@ -103,7 +102,6 @@ with run_tab:
 
     elif st.session_state["init_pts"] is None and file is not None:
         run.bounds_exist = find_bounds(file)
-        st.write(run.bounds_exist)
         # Parse bounds from the uploaded file
         if run.bounds_exist:
             run.X_names = list(file.columns)[:dim]
@@ -139,13 +137,11 @@ with run_tab:
         if st.session_state["init_pts"] is not None or file is not None:
             run.res = run.run_boss()
             run.display_result()
-            display_next_acq(run.res, run.X_names)
+            run.display_next_acq()
 
 with postprocess_tab:
-    st.markdown("Get plots and data files after optimizing with BOSS.")
-
     if st.session_state["bo_result"] is not None:
-        display_result(st.session_state["bo_result"], run.min_or_max, run.X_names)
+        run.display_result()
         pp = PostprocessingTab(st.session_state["bo_result"], run.X_names)
 
         col1, col2 = st.columns(2)
