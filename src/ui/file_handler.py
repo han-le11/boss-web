@@ -9,8 +9,13 @@ def upload_file():
     Widget to upload a file, which is read into a dataframe.
     Display the "help" tip when hovering the mouse over the question mark icon.
     """
+    if st.session_state["init_pts"] is None:
+        message = "Please upload a csv file first"
+    else:
+        message = "Restart by uploading a csv file"
+
     file = st.file_uploader(
-        "Please upload a csv file first",
+        label=message,
         type=["csv"],
         help="Your file should contain data for input variables and target variable",
     )
@@ -22,7 +27,7 @@ def upload_file():
             st.error("Error: " + str(err) + ". Please check the file contents and re-upload.")
 
 
-def check_if_there_are_bounds(df) -> bool:
+def find_bounds(df) -> bool:
     """
     Returns True if there are bounds in the uploaded file; otherwise False.
     :param df: data from the uploaded file that is read into a dataframe.
@@ -49,14 +54,18 @@ def parse_bounds(df):
         bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
         tp_bounds_array = np.transpose(bounds_array)
         return tp_bounds_array
+    else:
+        return None
 
 
 def extract_col_data(df: pd.DataFrame, keyword: str) -> np.array:
     """
     Get the column(s) whose name contains the given keyword.
     :param df: Uploaded file, which is read into a dataframe.
-    :param keyword: the keyword that the column name should contain.
-    :return: numpy array of the column(s) whose name contains the given keyword.
+    :param keyword: The keyword that the column name should contain.
+    :return:
+    array: np.array
+        An array of the column(s) whose name contains the given keyword.
     """
     array = df.filter(regex=keyword).to_numpy()
     if array.size == 0:
@@ -70,6 +79,15 @@ def choose_inputs_and_outputs(df):
     only one column for target variable.
     :param df:
         Dataframe read from the UploadedFile object (file uploaded by a user).
+    :return:
+    X_vals: np.array
+        An array of the column(s) chosen for input variables.
+    Y_vals: np.array
+        An array of the column(s) chosen for target variables.
+    X_names: list
+        A list of the column(s) chosen for input variables.
+    Y_name: list
+        A list of the column(s) chosen for target variables.
     """
     X_names = []
     Y_name = []

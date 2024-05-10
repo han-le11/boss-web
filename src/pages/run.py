@@ -83,9 +83,9 @@ with init_data_tab:
 
 
 with run_tab:
-    file = upload_file()  # uploaded file
-    bounds_from_file = None
-    run = RunBOSS()
+    data = upload_file()  # uploaded file
+    data_with_bounds = None
+    bo_run = RunBOSS()
 
     # Parse data immediately from generated initial points
     if (
@@ -94,39 +94,41 @@ with run_tab:
         and not np.isnan(init_bounds).any()
         and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
-        run.data = init_with_bounds.copy(deep=True).iloc[:, :-2]
-        run.X_names = list(init_with_bounds.columns)[:dim]
-        bounds_from_file = parse_bounds(init_with_bounds)
-        run.X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
-        run.Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
+        data_with_bounds = init_with_bounds
+        bo_run.data = init_with_bounds.copy(deep=True).iloc[:, :-2]
+        bo_run.X_names = list(init_with_bounds.columns)[:dim]
+        bo_run.X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
+        bo_run.Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
 
-    elif st.session_state["init_pts"] is None and file is not None:
-        run.bounds_exist = find_bounds(file)
+    elif st.session_state["init_pts"] is None and data is not None:
+        bo_run.bounds_exist = find_bounds(data)
         # Parse bounds from the uploaded file
-        if run.bounds_exist:
-            run.X_names = list(file.columns)[:dim]
-            run.data = file.iloc[:, :-2]
-            bounds_from_file = parse_bounds(file)
-            run.X_vals = extract_col_data(df=file, keyword="input-var")
-            run.Y_vals = extract_col_data(df=file, keyword="output-var")
+        if bo_run.bounds_exist:
+            data_with_bounds = data
+            bo_run.X_names = list(data.columns)[:dim]
+            bo_run.data = data.iloc[:, :-2]
+            bo_run.X_vals = extract_col_data(df=data, keyword="input-var")
+            bo_run.Y_vals = extract_col_data(df=data, keyword="output-var")
 
         # File doesn't have bounds. Manually set variable names and bounds
         else:
-            run.X_vals, run.Y_vals, run.X_names, run.Y_name = choose_inputs_and_outputs(file)
-            run.data = file[run.X_names + run.Y_name]
+            bo_run.X_vals, bo_run.Y_vals, bo_run.X_names, bo_run.Y_name = choose_inputs_and_outputs(data)
+            bo_run.data = data[bo_run.X_names + bo_run.Y_name]
 
-    if run.data is not None:
-        st.write(run.data)
-        run.bounds = input_X_bounds(run.X_names, bounds_from_file)
+    if bo_run.data is not None:
+        st.write(bo_run.data)
+        bounds_from_file = parse_bounds(data_with_bounds)
+        st.write("bounds_from_file", bounds_from_file)
+        bo_run.bounds = input_X_bounds(bo_run.X_names, bounds_from_file)
 
     # Choose minimize/maximize and noise variance
     col1, col2 = st.columns(2)
     with col1:
-        run.min_or_max = st.selectbox(
+        bo_run.min_or_max = st.selectbox(
             "Minimize or maximize the target value?", options=("Minimize", "Maximize")
         )
     with col2:
-        run.noise = st.number_input(
+        bo_run.noise = st.number_input(
             "Noise variance",
             min_value=0.0,
             format="%.5f",
@@ -134,15 +136,15 @@ with run_tab:
         )
 
     if st.button("Run BOSS"):
-        if st.session_state["init_pts"] is not None or file is not None:
-            run.res = run.run_boss()
-            run.display_result()
-            run.display_next_acq()
+        if st.session_state["init_p ts"] is not None or data is not None:
+            bo_run.res = bo_run.run_boss()
+            bo_run.display_result()
+            bo_run.display_next_acq()
 
 with postprocess_tab:
     if st.session_state["bo_result"] is not None:
-        run.display_result()
-        pp = PostprocessingTab(st.session_state["bo_result"], run.X_names)
+        bo_run.display_result()
+        pp = PostprocessingTab(st.session_state["bo_result"], bo_run.X_names)
 
         col1, col2 = st.columns(2)
         with col1:

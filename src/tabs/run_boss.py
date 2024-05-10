@@ -9,6 +9,9 @@ def dummy_func(_):
 
 
 class RunBOSS:
+    """
+    Class for running BOSS in the Run BOSS tab.
+    """
     def __init__(
             self,
             data=None,
