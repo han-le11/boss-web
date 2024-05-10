@@ -87,38 +87,47 @@ with run_tab:
     data_with_bounds = None
     bo_run = RunBOSS()
 
-    # Parse data immediately from generated initial points
-    if (
-        st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == dim + 1
-        and not np.isnan(init_bounds).any()
-        and "" not in list(st.session_state["names_and_bounds"].keys())
-    ):
-        data_with_bounds = init_with_bounds
-        bo_run.data = init_with_bounds.copy(deep=True).iloc[:, :-2]
-        bo_run.X_names = list(init_with_bounds.columns)[:dim]
-        bo_run.X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
-        bo_run.Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
-
-    elif st.session_state["init_pts"] is None and data is not None:
+    if st.session_state["init_pts"] is not None:
+        bo_run.bounds_exist = True
+    else:
         bo_run.bounds_exist = find_bounds(data)
-        # Parse bounds from the uploaded file
-        if bo_run.bounds_exist:
-            data_with_bounds = data
-            bo_run.X_names = list(data.columns)[:dim]
-            bo_run.data = data.iloc[:, :-2]
-            bo_run.X_vals = extract_col_data(df=data, keyword="input-var")
-            bo_run.Y_vals = extract_col_data(df=data, keyword="output-var")
 
-        # File doesn't have bounds. Manually set variable names and bounds
-        else:
-            bo_run.X_vals, bo_run.Y_vals, bo_run.X_names, bo_run.Y_name = choose_inputs_and_outputs(data)
-            bo_run.data = data[bo_run.X_names + bo_run.Y_name]
+    # Special case: File doesn't have bounds. Manually choose variables and their names
+    if data is not None and not bo_run.bounds_exist:
+        bo_run.X_names = list(data.columns)[:dim]
+        bo_run.X_vals, bo_run.Y_vals, bo_run.X_names, bo_run.Y_name = choose_inputs_and_outputs(data)
+        bo_run.data = data[bo_run.X_names + bo_run.Y_name]
+
+    else:
+        # Parse data immediately from generated initial points
+        if (
+            st.session_state["init_pts"] is not None
+            and len(st.session_state["init_pts"].columns) == dim + 1
+            and not np.isnan(init_bounds).any()
+            and "" not in list(st.session_state["names_and_bounds"].keys())
+        ):
+            data_with_bounds = init_with_bounds
+            # bo_run.data = init_with_bounds
+            # bo_run.X_names = list(init_with_bounds.columns)[:dim]
+            # bo_run.X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
+            # bo_run.Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
+
+        elif st.session_state["init_pts"] is None and data is not None:
+            # Parse bounds from the uploaded file
+            data_with_bounds = data
+            # bo_run.X_names = list(data.columns)[:dim]
+            # bo_run.data = data.iloc[:, :-2]
+            # bo_run.X_vals = extract_col_data(df=data, keyword="input-var")
+            # bo_run.Y_vals = extract_col_data(df=data, keyword="output-var")
+
+        bo_run.data = data_with_bounds.copy(deep=True).iloc[:, :-2]
+        bo_run.X_names = list(data_with_bounds.columns)[:dim]
+        bo_run.X_vals = extract_col_data(df=data_with_bounds, keyword="input-var")
+        bo_run.Y_vals = extract_col_data(df=data_with_bounds, keyword="output-var")
 
     if bo_run.data is not None:
         st.write(bo_run.data)
         bounds_from_file = parse_bounds(data_with_bounds)
-        st.write("bounds_from_file", bounds_from_file)
         bo_run.bounds = input_X_bounds(bo_run.X_names, bounds_from_file)
 
     # Choose minimize/maximize and noise variance
@@ -136,7 +145,7 @@ with run_tab:
         )
 
     if st.button("Run BOSS"):
-        if st.session_state["init_p ts"] is not None or data is not None:
+        if st.session_state["init_pts"] is not None or data is not None:
             bo_run.res = bo_run.run_boss()
             bo_run.display_result()
             bo_run.display_next_acq()
