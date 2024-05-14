@@ -81,7 +81,6 @@ with init_data_tab:
         )
         init_tab.download_init_points(init_with_bounds)
 
-
 with run_tab:
     data = upload_file()  # uploaded file
     data_with_bounds = None
@@ -92,10 +91,15 @@ with run_tab:
     else:
         bo_run.bounds_exist = find_bounds(data)
 
-    # Special case: File doesn't have bounds. Manually choose variables and their names
+    # File doesn't have bounds. Manually choose variables and their names
     if data is not None and not bo_run.bounds_exist:
         bo_run.X_names = list(data.columns)[:dim]
-        bo_run.X_vals, bo_run.Y_vals, bo_run.X_names, bo_run.Y_name = choose_inputs_and_outputs(data)
+        (
+            bo_run.X_vals,
+            bo_run.Y_vals,
+            bo_run.X_names,
+            bo_run.Y_name,
+        ) = choose_inputs_and_outputs(data)
         bo_run.data = data[bo_run.X_names + bo_run.Y_name]
 
     else:
@@ -107,25 +111,17 @@ with run_tab:
             and "" not in list(st.session_state["names_and_bounds"].keys())
         ):
             data_with_bounds = init_with_bounds
-            # bo_run.data = init_with_bounds
-            # bo_run.X_names = list(init_with_bounds.columns)[:dim]
-            # bo_run.X_vals = extract_col_data(df=init_with_bounds, keyword="input-var")
-            # bo_run.Y_vals = extract_col_data(df=init_with_bounds, keyword="output-var")
-
         elif st.session_state["init_pts"] is None and data is not None:
             # Parse bounds from the uploaded file
             data_with_bounds = data
-            # bo_run.X_names = list(data.columns)[:dim]
-            # bo_run.data = data.iloc[:, :-2]
-            # bo_run.X_vals = extract_col_data(df=data, keyword="input-var")
-            # bo_run.Y_vals = extract_col_data(df=data, keyword="output-var")
 
-        bo_run.data = data_with_bounds.copy(deep=True).iloc[:, :-2]
-        bo_run.X_names = list(data_with_bounds.columns)[:dim]
-        bo_run.X_vals = extract_col_data(df=data_with_bounds, keyword="input-var")
-        bo_run.Y_vals = extract_col_data(df=data_with_bounds, keyword="output-var")
+        if data_with_bounds is not None:
+            bo_run.data = data_with_bounds.copy(deep=True).iloc[:, :-2]
+            bo_run.X_names = list(data_with_bounds.columns)[:dim]
+            bo_run.X_vals = extract_col_data(df=data_with_bounds, keyword="input-var")
+            bo_run.Y_vals = extract_col_data(df=data_with_bounds, keyword="output-var")
 
-    if bo_run.data is not None:
+    if bo_run.data is not None and not bo_run.data.isnull().values.all():
         st.write(bo_run.data)
         bounds_from_file = parse_bounds(data_with_bounds)
         bo_run.bounds = input_X_bounds(bo_run.X_names, bounds_from_file)
