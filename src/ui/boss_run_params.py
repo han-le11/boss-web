@@ -14,7 +14,9 @@ def _check_bounds(lower_bound, upper_bound):
         st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
 
 
-def _display_input_widgets_X_bounds(X_names: list[str], dim: int, lower_and_upper_bounds: np.ndarray = None) -> (float, float):
+def _display_input_widgets_X_bounds(
+    X_names: list[str], dim: int, lower_and_upper_bounds: np.ndarray = None
+) -> (float, float):
     """
     Function to prompt the user to input lower and upper bounds for a variable.
 
@@ -24,7 +26,11 @@ def _display_input_widgets_X_bounds(X_names: list[str], dim: int, lower_and_uppe
     :return: Lower and upper bounds set by the user.
     """
     left_col, right_col = st.columns(2)
-    lower_and_upper_bounds = np.array([0.0, 0.0]) if lower_and_upper_bounds is None else lower_and_upper_bounds
+    lower_and_upper_bounds = (
+        np.array([0.0, 0.0])
+        if lower_and_upper_bounds is None
+        else lower_and_upper_bounds
+    )
     with left_col:
         lower_bound = st.number_input(
             "Lower bound of {var}".format(var=X_names[dim]),
@@ -42,7 +48,9 @@ def _display_input_widgets_X_bounds(X_names: list[str], dim: int, lower_and_uppe
     return lower_bound, upper_bound
 
 
-def input_X_bounds(X_names: list[str], lower_and_upper_bounds: np.ndarray = None) -> np.ndarray:
+def input_X_bounds(
+    X_names: list[str], lower_and_upper_bounds: np.ndarray = None
+) -> np.ndarray:
     """
     Display the number input widgets based on the dimension and input variable names.
 
@@ -54,8 +62,14 @@ def input_X_bounds(X_names: list[str], lower_and_upper_bounds: np.ndarray = None
     bounds = np.empty(shape=(dimension, 2))
     if X_names:
         for d in range(dimension):
-            lower_and_upper = np.array([0.0, 0.0]) if lower_and_upper_bounds is None else lower_and_upper_bounds[d]
-            lower_bound, upper_bound = _display_input_widgets_X_bounds(X_names, d, lower_and_upper)
+            lower_and_upper = (
+                np.array([0.0, 0.0])
+                if lower_and_upper_bounds is None
+                else lower_and_upper_bounds[d]
+            )
+            lower_bound, upper_bound = _display_input_widgets_X_bounds(
+                X_names, d, lower_and_upper
+            )
             bounds[d, 0] = lower_bound
             bounds[d, 1] = upper_bound
     return bounds
