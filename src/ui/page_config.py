@@ -39,7 +39,7 @@ def remove_toggles() -> None:
 
 
 class PageConfig:
-    def __init__(self, *, main_title, tab_title, header, icon) -> None:
+    def __init__(self, *, main_title, tab_title, header, icon: None) -> None:
         """
         Set layout for a certain page.
         :param main_title: str
