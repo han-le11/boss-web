@@ -28,10 +28,10 @@ for k, v in st.session_state.items():
 
 # Set page layout and settings
 page_config = PageConfig(
-    main_title="🏃‍♀️ Run BOSS and Post-processing",
+    main_title="Run BOSS and Post-processing",
     tab_title="Run BOSS",
     header="Run BO on this page",
-    icon="🏃‍♀️",
+    icon=None,
 )
 page_config.set_page()
 page_config.set_main_title()
@@ -81,29 +81,29 @@ with init_data_tab:
         )
         init_tab.download_init_points(init_with_bounds)
 
-with run_tab:
-    data = upload_file()  # uploaded file
+with (run_tab):
     data_with_bounds = None
     bo_run = RunBOSS()
-
+    bo_run.data = upload_file()  # uploaded file
     if st.session_state["init_pts"] is not None:
         bo_run.bounds_exist = True
     else:
-        bo_run.bounds_exist = find_bounds(data)
+        bo_run.bounds_exist = find_bounds(bo_run.data)
 
-    # File doesn't have bounds. Manually choose variables and their names
-    if data is not None and not bo_run.bounds_exist:
-        bo_run.X_names = list(data.columns)[:dim]
+    # THREE USE CASES:
+    # Case 1. File doesn't have any bounds.
+    if bo_run.data is not None and not bo_run.bounds_exist:
+        bo_run.X_names = list(bo_run.data.columns)[:dim]
         (
             bo_run.X_vals,
             bo_run.Y_vals,
             bo_run.X_names,
             bo_run.Y_name,
-        ) = choose_inputs_and_outputs(data)
-        bo_run.data = data[bo_run.X_names + bo_run.Y_name]
+        ) = choose_inputs_and_outputs(bo_run.data)
+        bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
 
-    else:
-        # Parse data immediately from generated initial points
+    elif bo_run.bounds_exist:
+        # Case 2. Parse bounds from generated initial points
         if (
             st.session_state["init_pts"] is not None
             and len(st.session_state["init_pts"].columns) == dim + 1
@@ -111,10 +111,12 @@ with run_tab:
             and "" not in list(st.session_state["names_and_bounds"].keys())
         ):
             data_with_bounds = init_with_bounds
-        elif st.session_state["init_pts"] is None and data is not None:
-            # Parse bounds from the uploaded file
-            data_with_bounds = data
 
+        # Case 3. Parse bounds from the uploaded file
+        elif st.session_state["init_pts"] is None and bo_run.data is not None:
+            data_with_bounds = bo_run.data
+
+        # Parsing data from uploaded file
         if data_with_bounds is not None:
             bo_run.data = data_with_bounds.copy(deep=True).iloc[:, :-2]
             bo_run.X_names = list(data_with_bounds.columns)[:dim]
@@ -122,7 +124,8 @@ with run_tab:
             bo_run.Y_vals = extract_col_data(df=data_with_bounds, keyword="output-var")
 
     if bo_run.data is not None and not bo_run.data.isnull().values.all():
-        st.write(bo_run.data)
+        df = st.data_editor(bo_run.data)
+        bo_run.data = df
         bounds_from_file = parse_bounds(data_with_bounds)
         bo_run.bounds = input_X_bounds(bo_run.X_names, bounds_from_file)
 
@@ -141,10 +144,14 @@ with run_tab:
         )
 
     if st.button("Run BOSS"):
-        if st.session_state["init_pts"] is not None or data is not None:
+        if st.session_state["init_pts"] is not None or bo_run.data is not None:
+            st.write(bo_run.data)
             bo_run.res = bo_run.run_boss()
             bo_run.display_result()
             bo_run.display_next_acq()
+    bo_run.get_next_acq()
+    bo_run.download_next_acq()
+
 
 with postprocess_tab:
     if st.session_state["bo_result"] is not None:

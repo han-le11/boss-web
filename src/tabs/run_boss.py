@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
 import streamlit as st
 from boss.bo.bo_main import BOMain
 from boss.bo.results import BOResults
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
 def dummy_func(_):
@@ -12,6 +14,7 @@ class RunBOSS:
     """
     Class for running BOSS in the Run BOSS tab.
     """
+
     def __init__(
             self,
             data=None,
@@ -34,8 +37,32 @@ class RunBOSS:
         self.min_or_max = min_or_max
         self.noise = noise
         self.res = res  # type: BOResults or None
+        self.X_next = None
+        self.arr_next_acq = None
 
-    def set_params(self):
+    def upload_file(self):
+        """
+        Widget to upload a file, which is read into a dataframe.
+        Display the "help" tip when hovering the mouse over the question mark icon.
+        """
+        if st.session_state["init_pts"] is None:
+            message = "Please upload a csv file first"
+        else:
+            message = "Restart by uploading a csv file"
+
+        self.data = st.file_uploader(
+            label=message,
+            type=["csv"],
+            help="Your file should contain data for input variables and target variable",
+        )
+        if isinstance(self.data, UploadedFile):
+            try:
+                df = pd.read_csv(self.data, sep=":|;|,")
+                return df
+            except ValueError as err:
+                st.error("Error: " + str(err) + ". Please check the file contents and re-upload.")
+
+    def set_opt_params(self):
         """
         Set parameters for minimization/maximization choice and noise variance.
         :return:
@@ -98,27 +125,29 @@ class RunBOSS:
         """
         Get and display the next acquisition location suggested by BOSS.
         """
-        x_next = self.res.get_next_acq(-1)
-        x_next = np.around(x_next, decimals=4)
+        self.X_next = self.res.get_next_acq(-1)
+        self.X_next = np.around(self.X_next, decimals=4)
         if self.X_names:
-            pairs = dict(zip(self.X_names, x_next))
+            pairs = dict(zip(self.X_names, self.X_next))
             for key, value in pairs.items():
                 st.success(
                     f"Next acquisition: \n" f"{key} at {value}",
                     icon="🔍",
                 )
 
-    def _get_next_acq(self):
+    def get_next_acq(self):
         if self.res is not None:
-            X_next = self.res.get_next_acq(-1)
-            X_next = np.around(X_next, decimals=4)
-            return X_next
+            self.X_next = self.res.get_next_acq(-1)
+            Y_val = np.ones(shape=(self.X_next.shape[0], 1)) * np.nan
+            XY_next = np.concatenate((self.X_next, Y_val), axis=1)
+            X_new = np.concatenate((self.data, XY_next), axis=0)
+            self.arr_next_acq = st.data_editor(X_new)
 
-    def concatenate_next_acq_to_data(self):
-        X_next = self._get_next_acq()
-        Y_val = np.ones(shape=(X_next.shape[0], 1)) * np.nan
-        # concatenate an empty column to record the target values
-        XY_next = np.concatenate((X_next, Y_val), axis=1)
-        X_new = np.concatenate((self.data, XY_next), axis=0)
-        # edited_df = st.data_editor(X_new)
-        return X_new
+    def download_next_acq(self) -> None:
+        if self.res is not None and self.arr_next_acq is not None:
+            df = pd.DataFrame(self.arr_next_acq)
+            st.download_button(
+                label="Download",
+                data=df.to_csv(index=False).encode("utf-8"),
+                mime="text/csv",
+            )
