@@ -110,14 +110,14 @@ def choose_inputs_and_outputs(df):
         X_vals = df[X_names]
         Y_vals = df[Y_name]
 
-        with st.expander("See chosen data"):
-            ins, outs = st.columns(2)
-            if X_vals.size != 0:
-                with ins:
-                    st.write("Input variables", X_vals)
-            if Y_vals.size != 0:
-                with outs:
-                    st.write("Target variable", Y_vals)
+        # with st.expander("See chosen data"):
+        #     ins, outs = st.columns(2)
+        #     if X_vals.size != 0:
+        #         with ins:
+        #             st.write("Input variables", X_vals)
+        #     if Y_vals.size != 0:
+        #         with outs:
+        #             st.write("Target variable", Y_vals)
         X_vals = X_vals.to_numpy()
         Y_vals = Y_vals.to_numpy()
     return X_vals, Y_vals, X_names, Y_name
