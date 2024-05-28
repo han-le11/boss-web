@@ -85,3 +85,17 @@ class PageConfig:
         Set header for a page, which appears in the sidebar.
         """
         st.sidebar.header(self.header)
+
+    @staticmethod
+    def init_states() -> None:
+        # Initialization of session states
+        if "bo_data" not in st.session_state:
+            st.session_state["bo_data"] = None
+        if "bo_result" not in st.session_state:
+            st.session_state["bo_result"] = None
+        if "names_and_bounds" not in st.session_state:
+            st.session_state["names_and_bounds"] = None
+        if "init_pts" not in st.session_state:
+            st.session_state["init_pts"] = None
+        for k, v in st.session_state.items():
+            st.session_state[k] = v
