@@ -33,6 +33,7 @@ class RunBOSS:
         self.X_vals = X_vals
         self.X_names = X_names
         self.Y_vals = Y_vals
+        self.dim = None
         self.kernel = "rbf"
         self.min_or_max = min_or_max
         self.noise = noise
@@ -40,18 +41,13 @@ class RunBOSS:
         self.X_next = None
         self.arr_next_acq = None
 
-    def upload_file(self):
+    def upload_file(self) -> pd.DataFrame:
         """
         Widget to upload a file, which is read into a dataframe.
         Display the "help" tip when hovering the mouse over the question mark icon.
         """
-        if st.session_state["init_pts"] is None:
-            message = "Please upload a csv file first"
-        else:
-            message = "Restart by uploading a csv file"
-
         self.data = st.file_uploader(
-            label=message,
+            label="Restart by uploading a csv file",
             type=["csv"],
             help="Your file should contain data for input variables and target variable",
         )
@@ -60,7 +56,93 @@ class RunBOSS:
                 df = pd.read_csv(self.data, sep=":|;|,")
                 return df
             except ValueError as err:
-                st.error("Error: " + str(err) + ". Please check the file contents and re-upload.")
+                st.error(
+                    "Error: "
+                    + str(err)
+                    + ". Please check the file contents and re-upload."
+                )
+
+    def parse_bounds(self, df):
+        """
+        Return the variable names and bounds to run with BOMain object.
+        :param df: Uploaded file, which is read into a dataframe.
+        :return:
+            tp_bounds_array: numpy array of the bounds
+        """
+        if df is not None:
+            bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
+            self.bounds = np.transpose(bounds_array)
+            self.dim = self.bounds.shape[0]
+
+    # TODO
+    def _check_bounds(self, lower_bound, upper_bound):
+        """
+        Check if the lower bound is smaller than the upper bound.
+        :param lower_bound:
+        :param upper_bound:
+        :return:
+        """
+        if not lower_bound < upper_bound:
+            st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
+        pass
+
+    def _display_input_widgets_X_bounds(self,
+                                        d, cur_bounds: np.ndarray = None
+                                        ) -> (float, float):
+        """
+        Function to prompt the user to input lower and upper bounds for a variable.
+
+        :param d: Current dimension of the variable being considered.
+        :param cur_bounds: Default values of lower and upper bounds in input widgets when they first render.
+        :return: Lower and upper bounds set by the user.
+        """
+        left_col, right_col = st.columns(2)
+        cur_bounds = (
+            np.array([0.0, 0.0])
+            if cur_bounds is None
+            else cur_bounds
+        )
+        with left_col:
+            lower_bound = st.number_input(
+                "Lower bound of {var}".format(var=self.X_names[d]),
+                format="%.5f",
+                help="Minimum value of the variable that defines the search space",
+                value=cur_bounds[0],
+            )
+        with right_col:
+            upper_bound = st.number_input(
+                "Upper bound of {var}".format(var=self.X_names[d]),
+                format="%.5f",
+                help="Maximum value of the variable that defines the search space",
+                value=cur_bounds[1],
+            )
+        return lower_bound, upper_bound
+
+    def input_X_bounds(self, defaults: np.ndarray = None):
+        """
+        Display the number input widgets based on the dimension and input variable names.
+
+        :param defaults: Default values of lower and upper bounds in input widgets when they first render.
+        :return:
+            Lower and upper bounds set by the user.
+        """
+        if not self.X_names:
+            self.X_names = list(self.data.columns)[:self.dim]
+        self.dim = len(self.X_names)
+        if self.bounds is None:
+            self.bounds = np.empty(shape=(self.dim, 2))
+        # st.write("bounds: ", self.bounds)
+        for d in range(self.dim):
+            lower_and_upper = (
+                np.array([0.0, 0.0])
+                if defaults is None
+                else defaults[d]
+            )
+            lower_b, upper_b = self._display_input_widgets_X_bounds(
+                d, lower_and_upper
+            )
+            self.bounds[d, 0] = lower_b
+            self.bounds[d, 1] = upper_b
 
     def set_opt_params(self):
         """
@@ -81,6 +163,14 @@ class RunBOSS:
                 help="Estimated variance for the Gaussian noise",
             )
 
+    # TODO
+    def set_adv_params(self):
+        """
+        Set advanced, optional parameters.
+        :return:
+        """
+        pass
+
     def run_boss(self):
         bo = BOMain(
             f=dummy_func,
@@ -94,6 +184,7 @@ class RunBOSS:
         else:
             self.res = bo.run(self.X_vals, -self.Y_vals)
         st.session_state["bo_result"] = self.res  # write BO result to session state
+        self.X_next = self.res.get_next_acq(-1)
         return self.res
 
     def display_result(self) -> None:
@@ -135,17 +226,17 @@ class RunBOSS:
                     icon="🔍",
                 )
 
-    def get_next_acq(self):
+    def concat_next_acq(self) -> None:
         if self.res is not None:
-            self.X_next = self.res.get_next_acq(-1)
-            Y_val = np.ones(shape=(self.X_next.shape[0], 1)) * np.nan
-            XY_next = np.concatenate((self.X_next, Y_val), axis=1)
-            X_new = np.concatenate((self.data, XY_next), axis=0)
-            self.arr_next_acq = st.data_editor(X_new)
+            # self.X_next = self.res.get_next_acq(-1)
+            XY_next = np.concatenate(
+                (self.X_next, np.ones(shape=(self.X_next.shape[0], 1)) * np.nan), axis=1
+            )
+            self.data = np.concatenate((self.data, XY_next), axis=0)
 
-    def download_next_acq(self) -> None:
-        if self.res is not None and self.arr_next_acq is not None:
-            df = pd.DataFrame(self.arr_next_acq)
+    def download_next_acq(self, new_data) -> None:
+        if self.res is not None:
+            df = pd.DataFrame(new_data)
             st.download_button(
                 label="Download",
                 data=df.to_csv(index=False).encode("utf-8"),
