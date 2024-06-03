@@ -21,11 +21,10 @@ config.set_header()
 customize_footer()
 remove_toggles()
 
-init_data_tab, run_tab, postprocess_tab, test = st.tabs(
-    ["Create initial data", "Run BOSS", "Post-processing", "Test"]
+init_data_tab, run_tab, postprocess_tab = st.tabs(
+    ["Create initial data", "Run BOSS", "Post-processing"]
 )
 bo_run = RunBOSS()
-print("next acq", bo_run.X_next)
 
 with init_data_tab:
     init_tab = InitManagerTab()
@@ -51,10 +50,10 @@ with init_data_tab:
             )
 
     if (
-        st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == dim + 1
-        and not np.isnan(init_bounds).any()
-        and "" not in list(st.session_state["names_and_bounds"].keys())
+            st.session_state["init_pts"] is not None
+            and len(st.session_state["init_pts"].columns) == dim + 1
+            and not np.isnan(init_bounds).any()
+            and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
 
@@ -64,7 +63,6 @@ with init_data_tab:
         )
         init_tab.download_init_points(bo_run.data)
         st.session_state.bo_data = bo_run.data
-        # st.write("init_with_bounds", bo_run.data)
 
 with run_tab:
     bo_run.data = bo_run.upload_file()
@@ -93,47 +91,32 @@ with run_tab:
 
         # Case 3. Parse bounds from the uploaded file
         # elif st.session_state["init_pts"] is None and bo_run.data is not None:
-            # df_with_bounds = bo_run.data
-            # st.session_state.bo_data = df_with_bounds
+        # df_with_bounds = bo_run.data
+        # st.session_state.bo_data = df_with_bounds
 
         # Parsing from uploaded file
         if bo_run.data is not None:
             bo_run.X_vals = bo_run.extract_col_data(keyword="input-var")
             bo_run.Y_vals = bo_run.extract_col_data(keyword="output-var")
-            st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[
-                :, : -len(bo_run.X_vals[0])
-            ]
+            st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
 
     if (
-        st.session_state.bo_data is not None
-        and not st.session_state.bo_data.isnull().values.all()
+        bo_run.data is not None
+        and not bo_run.data.isnull().values.all()
     ):
-        bo_run.data = st.data_editor(bo_run.data)
         bo_run.parse_bounds(bo_run.data)
         bo_run.input_X_bounds(bo_run.bounds)
+        bo_run.set_opt_params()
+        if bo_run.bounds_exist:
+            bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
+        bo_run.data = st.data_editor(bo_run.data)
 
-    # Choose minimize/maximize and noise variance
-    col1, col2 = st.columns(2)
-    with col1:
-        bo_run.min_or_max = st.selectbox(
-            "Minimize or maximize the target value?", options=("Minimize", "Maximize")
-        )
-    with col2:
-        bo_run.noise = st.number_input(
-            "Noise variance",
-            min_value=0.0,
-            format="%.5f",
-            help="Estimated variance for the Gaussian noise",
-        )
-
-    if st.button("Run BOSS"):
-        if st.session_state["init_pts"] is not None or bo_run.data is not None:
+    if st.button("Run BOSS", on_click=bo_run.concat_next_acq()):
+        if bo_run.data is not None:
             bo_run.res = bo_run.run_boss()
             bo_run.display_result()
             bo_run.display_next_acq()
             bo_run.concat_next_acq()
-            st.write("updated data: ", st.session_state.bo_data)
-
 
 with postprocess_tab:
     if st.session_state["bo_result"] is not None:
