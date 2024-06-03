@@ -4,11 +4,7 @@ from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from tabs.run_boss import RunBOSS
-from ui.file_handler import (
-    find_bounds,
-    choose_inputs_and_outputs,
-    extract_col_data
-)
+from ui.file_handler import find_bounds
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 
 # Set page layout and settings
@@ -25,14 +21,16 @@ config.set_header()
 customize_footer()
 remove_toggles()
 
-init_data_tab, run_tab, postprocess_tab = st.tabs(
-    ["Create initial data", "Run BOSS", "Post-processing"]
+init_data_tab, run_tab, postprocess_tab, test = st.tabs(
+    ["Create initial data", "Run BOSS", "Post-processing", "Test"]
 )
+bo_run = RunBOSS()
+print("next acq", bo_run.X_next)
 
 with init_data_tab:
-    bo_run = RunBOSS()
     init_tab = InitManagerTab()
     init_type, initpts, dim = init_tab.set_page()
+    bo_run.dim = dim
     init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(dim)
 
     if st.button("Generate points"):
@@ -53,66 +51,66 @@ with init_data_tab:
             )
 
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
 
         # df with bounds, only seen when downloaded, not shown in UI
-        init_with_bounds = init_tab.add_bounds_to_dataframe(
+        bo_run.data = init_tab.add_bounds_to_dataframe(
             bo_run.data, st.session_state["names_and_bounds"]
         )
-        init_tab.download_init_points(init_with_bounds)
+        init_tab.download_init_points(bo_run.data)
+        st.session_state.bo_data = bo_run.data
+        # st.write("init_with_bounds", bo_run.data)
 
+with run_tab:
+    bo_run.data = bo_run.upload_file()
 
-with (run_tab):
-    df_with_bounds = None
-    bo_run.data = bo_run.upload_file()  # uploaded file
     if st.session_state["init_pts"] is not None:
         bo_run.bounds_exist = True
+        bo_run.data = st.session_state.bo_data  # temporary implementation: give data back to bo_run.data
     else:
         bo_run.bounds_exist = find_bounds(bo_run.data)
 
-    # THREE USE CASES:
     # Case 1. File doesn't have any bounds.
     if bo_run.data is not None and not bo_run.bounds_exist:
-        (
-            bo_run.X_vals,
-            bo_run.Y_vals,
-            bo_run.X_names,
-            bo_run.Y_name,
-        ) = choose_inputs_and_outputs(bo_run.data)
+        st.session_state.bo_data = bo_run.data
+        bo_run.choose_inputs_and_outputs(bo_run.data)
         bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
 
     elif bo_run.bounds_exist:
         # Case 2. Parse bounds from generated initial points
-        if (
-                st.session_state["init_pts"] is not None
-                and len(st.session_state["init_pts"].columns) == dim + 1
-                and not np.isnan(init_bounds).any()
-                and "" not in list(st.session_state["names_and_bounds"].keys())
-        ):
-            df_with_bounds = init_with_bounds
+        # if (
+        #     st.session_state["init_pts"] is not None
+        #     and len(st.session_state["init_pts"].columns) == dim + 1
+        #     and not np.isnan(init_bounds).any()
+        #     and "" not in list(st.session_state["names_and_bounds"].keys())
+        # ):
+        #     df_with_bounds = bo_run.data
 
         # Case 3. Parse bounds from the uploaded file
-        elif st.session_state["init_pts"] is None and bo_run.data is not None:
-            df_with_bounds = bo_run.data
+        # elif st.session_state["init_pts"] is None and bo_run.data is not None:
+            # df_with_bounds = bo_run.data
+            # st.session_state.bo_data = df_with_bounds
 
-        # Parsing data from uploaded file
-        if df_with_bounds is not None or bo_run.data is not None:
-            bo_run.X_vals = extract_col_data(df=bo_run.data, keyword="input-var")
-            bo_run.Y_vals = extract_col_data(df=bo_run.data, keyword="output-var")
-            bo_run.dim = len(bo_run.X_vals[0])
-            st.write("dimension: ", bo_run.dim)
-            bo_run.data = df_with_bounds.copy(deep=False).iloc[:, :-bo_run.dim]
+        # Parsing from uploaded file
+        if bo_run.data is not None:
+            bo_run.X_vals = bo_run.extract_col_data(keyword="input-var")
+            bo_run.Y_vals = bo_run.extract_col_data(keyword="output-var")
+            st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[
+                :, : -len(bo_run.X_vals[0])
+            ]
 
-    if bo_run.data is not None and not bo_run.data.isnull().values.all():
+    if (
+        st.session_state.bo_data is not None
+        and not st.session_state.bo_data.isnull().values.all()
+    ):
         bo_run.data = st.data_editor(bo_run.data)
-        bo_run.parse_bounds(df_with_bounds)
+        bo_run.parse_bounds(bo_run.data)
         bo_run.input_X_bounds(bo_run.bounds)
-        st.write("x next: ", bo_run.X_next)
 
     # Choose minimize/maximize and noise variance
     col1, col2 = st.columns(2)
@@ -131,14 +129,11 @@ with (run_tab):
     if st.button("Run BOSS"):
         if st.session_state["init_pts"] is not None or bo_run.data is not None:
             bo_run.res = bo_run.run_boss()
-            st.write(f"y min: {bo_run.Y_vals.min()}, y max {bo_run.Y_vals.max()}")
             bo_run.display_result()
             bo_run.display_next_acq()
+            bo_run.concat_next_acq()
+            st.write("updated data: ", st.session_state.bo_data)
 
-    if bo_run.data is not None and bo_run.X_next is not None:
-        bo_run.concat_next_acq()
-        bo_run.data = st.data_editor(bo_run.data)
-        bo_run.download_next_acq(bo_run.data)
 
 with postprocess_tab:
     if st.session_state["bo_result"] is not None:

@@ -16,23 +16,24 @@ class RunBOSS:
     """
 
     def __init__(
-            self,
-            data=None,
-            bounds=None,
-            bounds_exist=False,
-            X_vals=None,
-            Y_vals=None,
-            X_names=None,
-            min_or_max=None,
-            noise=None,
-            res=None,
+        self,
+        data=None,
+        bounds=None,
+        bounds_exist=False,
+        X_vals=None,
+        Y_vals=None,
+        X_names=None,
+        min_or_max=None,
+        noise=None,
+        res=None,
     ):
-        self.data = data
+        self.data = data  # type: pd.DataFrame or None
         self.bounds = bounds
         self.bounds_exist = bounds_exist
         self.X_vals = X_vals
         self.X_names = X_names
         self.Y_vals = Y_vals
+        self.Y_name = None
         self.dim = None
         self.kernel = "rbf"
         self.min_or_max = min_or_max
@@ -62,6 +63,48 @@ class RunBOSS:
                     + ". Please check the file contents and re-upload."
                 )
 
+    def choose_inputs_and_outputs(self, df):
+        """
+        Display widgets that let users choose at least one column for input variable(s) and
+        only one column for target variable.
+        :param df:
+            Dataframe read from the UploadedFile object (file uploaded by a user).
+        """
+
+        if df is not None:
+            in_col, out_col = st.columns(2)
+            with in_col:
+                self.X_names = st.multiselect(
+                    "Choose input variables *",
+                    options=list(self.data.columns),
+                    default=None,
+                )
+            with out_col:
+                self.Y_name = st.multiselect(
+                    "Choose one target variable *",
+                    options=list(self.data.columns),
+                    default=None,
+                    max_selections=1,
+                )
+            self.X_vals = self.data[self.X_names]
+            self.Y_vals = self.data[self.Y_name]
+            self.X_vals = self.X_vals.to_numpy()
+            self.Y_vals = self.Y_vals.to_numpy()
+
+    def extract_col_data(self, keyword: str) -> np.array:
+        """
+        Get the data where column name contains the given keyword.
+        :param keyword: The keyword that the column name should contain.
+        :return:
+        array: np.array
+            An array of the column(s) whose name contains the given keyword.
+        """
+        # st.write("data for boss: ", self.data)
+        array = self.data.filter(regex=keyword).to_numpy()
+        if array.size == 0:
+            array = np.array([])
+        return array
+
     def parse_bounds(self, df):
         """
         Return the variable names and bounds to run with BOMain object.
@@ -69,7 +112,7 @@ class RunBOSS:
         :return:
             tp_bounds_array: numpy array of the bounds
         """
-        if df is not None:
+        if self.bounds_exist:
             bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
             self.bounds = np.transpose(bounds_array)
             self.dim = self.bounds.shape[0]
@@ -86,9 +129,9 @@ class RunBOSS:
             st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
         pass
 
-    def _display_input_widgets_X_bounds(self,
-                                        d, cur_bounds: np.ndarray = None
-                                        ) -> (float, float):
+    def _display_input_widgets_X_bounds(
+        self, d, cur_bounds: np.ndarray = None
+    ) -> (float, float):
         """
         Function to prompt the user to input lower and upper bounds for a variable.
 
@@ -97,11 +140,7 @@ class RunBOSS:
         :return: Lower and upper bounds set by the user.
         """
         left_col, right_col = st.columns(2)
-        cur_bounds = (
-            np.array([0.0, 0.0])
-            if cur_bounds is None
-            else cur_bounds
-        )
+        cur_bounds = np.array([0.0, 0.0]) if cur_bounds is None else cur_bounds
         with left_col:
             lower_bound = st.number_input(
                 "Lower bound of {var}".format(var=self.X_names[d]),
@@ -123,24 +162,18 @@ class RunBOSS:
         Display the number input widgets based on the dimension and input variable names.
 
         :param defaults: Default values of lower and upper bounds in input widgets when they first render.
-        :return:
-            Lower and upper bounds set by the user.
         """
         if not self.X_names:
-            self.X_names = list(self.data.columns)[:self.dim]
+            self.X_names = list(st.session_state.bo_data.columns)[: self.dim]
+        if not self.Y_name:
+            self.Y_name = [st.session_state.bo_data.columns[self.dim]]
         self.dim = len(self.X_names)
+
         if self.bounds is None:
             self.bounds = np.empty(shape=(self.dim, 2))
-        # st.write("bounds: ", self.bounds)
         for d in range(self.dim):
-            lower_and_upper = (
-                np.array([0.0, 0.0])
-                if defaults is None
-                else defaults[d]
-            )
-            lower_b, upper_b = self._display_input_widgets_X_bounds(
-                d, lower_and_upper
-            )
+            lower_and_upper = np.array([0.0, 0.0]) if defaults is None else defaults[d]
+            lower_b, upper_b = self._display_input_widgets_X_bounds(d, lower_and_upper)
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
 
@@ -179,6 +212,7 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
+        st.write(f"y min: {self.Y_vals.min()}, y max {self.Y_vals.max()}")
         if self.min_or_max == "Minimize":
             self.res = bo.run(self.X_vals, self.Y_vals)
         else:
@@ -226,13 +260,16 @@ class RunBOSS:
                     icon="🔍",
                 )
 
-    def concat_next_acq(self) -> None:
-        if self.res is not None:
-            # self.X_next = self.res.get_next_acq(-1)
+    def concat_next_acq(self):
+        if self.X_next is not None:
             XY_next = np.concatenate(
                 (self.X_next, np.ones(shape=(self.X_next.shape[0], 1)) * np.nan), axis=1
             )
-            self.data = np.concatenate((self.data, XY_next), axis=0)
+            st.write("xy next: ", XY_next)
+            acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
+            st.session_state.bo_data = pd.concat(
+                [st.session_state.bo_data, acq], ignore_index=True
+            )
 
     def download_next_acq(self, new_data) -> None:
         if self.res is not None:
