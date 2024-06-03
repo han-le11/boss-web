@@ -267,9 +267,10 @@ class RunBOSS:
             )
             st.write("xy next: ", XY_next)
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
-            st.session_state.bo_data = pd.concat(
-                [st.session_state.bo_data, acq], ignore_index=True
+            self.data = pd.concat(
+                [self.data, acq], ignore_index=False
             )
+            st.write("updated data: ", self.data)
 
     def download_next_acq(self, new_data) -> None:
         if self.res is not None:
