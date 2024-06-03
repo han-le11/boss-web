@@ -90,9 +90,11 @@ class PageConfig:
     def init_states() -> None:
         # Initialization of session states
         if "bo_data" not in st.session_state:
-            st.session_state["bo_data"] = None
+            st.session_state.bo_data = None
         if "bo_result" not in st.session_state:
             st.session_state["bo_result"] = None
+        if "x_next" not in st.session_state:
+            st.session_state["x_next"] = None
         if "names_and_bounds" not in st.session_state:
             st.session_state["names_and_bounds"] = None
         if "init_pts" not in st.session_state:
