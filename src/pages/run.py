@@ -50,10 +50,10 @@ with init_data_tab:
             )
 
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
 
@@ -66,10 +66,9 @@ with init_data_tab:
 
 with run_tab:
     bo_run.data = bo_run.upload_file()
-
     if st.session_state["init_pts"] is not None:
         bo_run.bounds_exist = True
-        bo_run.data = st.session_state.bo_data  # temporary implementation: give data back to bo_run.data
+        bo_run.data = st.session_state.bo_data  # temporary: give data back to bo_run
     else:
         bo_run.bounds_exist = find_bounds(bo_run.data)
 
@@ -79,31 +78,13 @@ with run_tab:
         bo_run.choose_inputs_and_outputs(bo_run.data)
         bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
 
-    elif bo_run.bounds_exist:
-        # Case 2. Parse bounds from generated initial points
-        # if (
-        #     st.session_state["init_pts"] is not None
-        #     and len(st.session_state["init_pts"].columns) == dim + 1
-        #     and not np.isnan(init_bounds).any()
-        #     and "" not in list(st.session_state["names_and_bounds"].keys())
-        # ):
-        #     df_with_bounds = bo_run.data
+    # Case 2 and 3. Parse bounds from uploaded file or initial data points
+    elif bo_run.data is not None:
+        bo_run.X_vals = bo_run.extract_col_data(keyword="input-var")
+        bo_run.Y_vals = bo_run.extract_col_data(keyword="output-var")
+        st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
 
-        # Case 3. Parse bounds from the uploaded file
-        # elif st.session_state["init_pts"] is None and bo_run.data is not None:
-        # df_with_bounds = bo_run.data
-        # st.session_state.bo_data = df_with_bounds
-
-        # Parsing from uploaded file
-        if bo_run.data is not None:
-            bo_run.X_vals = bo_run.extract_col_data(keyword="input-var")
-            bo_run.Y_vals = bo_run.extract_col_data(keyword="output-var")
-            st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
-
-    if (
-        bo_run.data is not None
-        and not bo_run.data.isnull().values.all()
-    ):
+    if bo_run.data is not None and not bo_run.data.isnull().values.all():
         bo_run.parse_bounds(bo_run.data)
         bo_run.input_X_bounds(bo_run.bounds)
         bo_run.set_opt_params()
@@ -111,7 +92,7 @@ with run_tab:
             bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
         bo_run.data = st.data_editor(bo_run.data)
 
-    if st.button("Run BOSS", on_click=bo_run.concat_next_acq()):
+    if st.button("Run BOSS"):
         if bo_run.data is not None:
             bo_run.res = bo_run.run_boss()
             bo_run.display_result()

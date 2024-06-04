@@ -272,9 +272,9 @@ class RunBOSS:
             )
             st.write("updated data: ", self.data)
 
-    def download_next_acq(self, new_data) -> None:
+    def download_next_acq(self) -> None:
         if self.res is not None:
-            df = pd.DataFrame(new_data)
+            df = pd.DataFrame(self.data)
             st.download_button(
                 label="Download",
                 data=df.to_csv(index=False).encode("utf-8"),
