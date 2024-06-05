@@ -7,6 +7,8 @@ from tabs.run_boss import RunBOSS
 from ui.file_handler import find_bounds
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 
+bo_run = RunBOSS()
+
 # Set page layout and settings
 config = PageConfig(
     main_title="Run BOSS and Post-processing",
@@ -16,26 +18,23 @@ config = PageConfig(
 )
 config.init_states()
 config.set_page()
-config.set_main_title()
-config.set_header()
 customize_footer()
 remove_toggles()
-
+if "bo_data" not in st.session_state:
+    st.session_state.bo_data = bo_run.data
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
 )
-bo_run = RunBOSS()
 
 with init_data_tab:
     init_tab = InitManagerTab()
-    init_type, initpts, dim = init_tab.set_page()
-    bo_run.dim = dim
-    init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(dim)
+    init_type, initpts, bo_run.dim = init_tab.set_page()
+    init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(bo_run.dim)
 
     if st.button("Generate points"):
         if np.isnan(init_bounds).any():
-            st.error("Error: Please input names and bounds for all variables.")
-        if len(list(st.session_state["names_and_bounds"].keys())) != dim + 1:
+            st.error("Error: Please input valid names and bounds for all variables.")
+        if len(list(st.session_state["names_and_bounds"].keys())) != bo_run.dim + 1:
             st.error("Error: Please give a distinct name for each variable.")
         else:
             init_manager = init_tab.set_init_manager(
@@ -44,19 +43,18 @@ with init_data_tab:
                 init_bounds,
             )
             init_pts = init_manager.get_all()
-            # concatenate an empty column for target values and save to session state
+            # concatenate an empty column for target values to df and save to session state
             st.session_state["init_pts"] = init_tab.add_var_names(
                 init_pts, st.session_state["names_and_bounds"]
             )
 
     if (
         st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == dim + 1
+        and len(st.session_state["init_pts"].columns) == bo_run.dim + 1
         and not np.isnan(init_bounds).any()
         and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
-
         # df with bounds, only seen when downloaded, not shown in UI
         bo_run.data = init_tab.add_bounds_to_dataframe(
             bo_run.data, st.session_state["names_and_bounds"]
@@ -67,10 +65,12 @@ with init_data_tab:
 with run_tab:
     bo_run.data = bo_run.upload_file()
     if st.session_state["init_pts"] is not None:
-        bo_run.bounds_exist = True
-        bo_run.data = st.session_state.bo_data  # temporary: give data back to bo_run
-    else:
-        bo_run.bounds_exist = find_bounds(bo_run.data)
+        # Set init points to None if uploaded file is different from init points
+        if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
+            st.session_state["init_pts"] = None
+        else:
+            bo_run.data = st.session_state.bo_data   # temporary: give data back to bo_run
+    bo_run.bounds_exist = find_bounds(bo_run.data)
 
     # Case 1. File doesn't have any bounds.
     if bo_run.data is not None and not bo_run.bounds_exist:
@@ -90,7 +90,7 @@ with run_tab:
         bo_run.set_opt_params()
         if bo_run.bounds_exist:
             bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
-        bo_run.data = st.data_editor(bo_run.data)
+        st.session_state.bo_data = st.data_editor(bo_run.data, key="run-data")
 
     if st.button("Run BOSS"):
         if bo_run.data is not None:
