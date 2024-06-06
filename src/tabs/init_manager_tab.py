@@ -57,12 +57,9 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
 
 class InitManagerTab:
     def __init__(self):
-        self.init_pts = []
-        self.var_names = []
-        self.points_dict = dict
+        self.dim = None
 
-    @staticmethod
-    def set_page():
+    def set_page(self):
         st.markdown(
             "#### If you have not had any data, create initial data points here."
         )
@@ -87,13 +84,13 @@ class InitManagerTab:
                 help="The number of initial data points to create",
             )
         with left:
-            dimension = st.number_input(
+            self.dim = st.number_input(
                 "Choose the dimension of the search space",
                 value=2,  # When this widget first renders, its value is 2.
                 min_value=1,
                 step=1,
             )
-        return init_type, initpts, dimension
+        return init_type, initpts
 
     @staticmethod
     def set_init_manager(init_type, initpts, bounds) -> InitManager:
@@ -125,6 +122,7 @@ class InitManagerTab:
         :param init_arr: numpy array of initial points.
         :param names_and_bounds: dictionary
         :return:
+            df: dataframe containing initial points and an empty column for recording the target variable.
         """
         var_names = list(names_and_bounds.keys())
         if "" in var_names:
