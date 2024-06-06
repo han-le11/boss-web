@@ -9,8 +9,6 @@ page_config = PageConfig(
 )
 
 page_config.set_page()
-page_config.set_main_title()
-page_config.set_header()
 customize_footer()
 
 st.markdown(
