@@ -73,24 +73,12 @@ class PageConfig:
                     </style>
                     """
         st.markdown(set_width, unsafe_allow_html=True)
-
-    def set_main_title(self) -> None:
-        """
-        Set main title in the main area, at the center of a page.
-        """
         st.title(self.main_title)
-
-    def set_header(self) -> None:
-        """
-        Set header for a page, which appears in the sidebar.
-        """
         st.sidebar.header(self.header)
 
     @staticmethod
     def init_states() -> None:
         # Initialization of session states
-        if "bo_data" not in st.session_state:
-            st.session_state.bo_data = None
         if "bo_result" not in st.session_state:
             st.session_state["bo_result"] = None
         if "x_next" not in st.session_state:
