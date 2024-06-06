@@ -27,42 +27,43 @@ init_data_tab, run_tab, postprocess_tab = st.tabs(
 )
 
 with init_data_tab:
-    init_tab = InitManagerTab()
-    init_type, initpts, bo_run.dim = init_tab.set_page()
-    init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(bo_run.dim)
+    init = InitManagerTab()
+    init_type, initpts = init.set_page()
+    init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(init.dim)
 
     if st.button("Generate points"):
         if np.isnan(init_bounds).any():
             st.error("Error: Please input valid names and bounds for all variables.")
-        if len(list(st.session_state["names_and_bounds"].keys())) != bo_run.dim + 1:
+        if len(list(st.session_state["names_and_bounds"].keys())) != init.dim + 1:
             st.error("Error: Please give a distinct name for each variable.")
         else:
-            init_manager = init_tab.set_init_manager(
+            init_manager = init.set_init_manager(
                 init_type,
                 initpts,
                 init_bounds,
             )
             init_pts = init_manager.get_all()
             # concatenate an empty column for target values to df and save to session state
-            st.session_state["init_pts"] = init_tab.add_var_names(
+            st.session_state["init_pts"] = init.add_var_names(
                 init_pts, st.session_state["names_and_bounds"]
             )
 
     if (
         st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == bo_run.dim + 1
+        and len(st.session_state["init_pts"].columns) == init.dim + 1
         and not np.isnan(init_bounds).any()
         and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
         # df with bounds, only seen when downloaded, not shown in UI
-        bo_run.data = init_tab.add_bounds_to_dataframe(
+        bo_run.data = init.add_bounds_to_dataframe(
             bo_run.data, st.session_state["names_and_bounds"]
         )
-        init_tab.download_init_points(bo_run.data)
+        init.download_init_points(bo_run.data)
         st.session_state.bo_data = bo_run.data
 
 with run_tab:
+    # st.write("updated data: ", st.session_state.bo_data)
     bo_run.data = bo_run.upload_file()
     if st.session_state["init_pts"] is not None:
         # Set init points to None if uploaded file is different from init points
@@ -82,6 +83,7 @@ with run_tab:
     elif bo_run.data is not None:
         bo_run.X_vals = bo_run.extract_col_data(keyword="input-var")
         bo_run.Y_vals = bo_run.extract_col_data(keyword="output-var")
+        bo_run.dim = bo_run.X_vals.shape[1]
         st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
 
     if bo_run.data is not None and not bo_run.data.isnull().values.all():
@@ -90,7 +92,7 @@ with run_tab:
         bo_run.set_opt_params()
         if bo_run.bounds_exist:
             bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
-        st.session_state.bo_data = st.data_editor(bo_run.data, key="run-data")
+        st.session_state.bo_data = st.data_editor(bo_run.data)
 
     if st.button("Run BOSS"):
         if bo_run.data is not None:
