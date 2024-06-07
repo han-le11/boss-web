@@ -7,8 +7,6 @@ from tabs.run_boss import RunBOSS
 from ui.file_handler import find_bounds
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 
-bo_run = RunBOSS()
-
 # Set page layout and settings
 config = PageConfig(
     main_title="Run BOSS and Post-processing",
@@ -20,8 +18,10 @@ config.init_states()
 config.set_page()
 customize_footer()
 remove_toggles()
+
+bo_run = RunBOSS()
 if "bo_data" not in st.session_state:
-    st.session_state.bo_data = bo_run.data
+    st.session_state.bo_data = st.session_state.bo_data
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
 )
@@ -63,8 +63,9 @@ with init_data_tab:
         st.session_state.bo_data = bo_run.data
 
 with run_tab:
-    # st.write("updated data: ", st.session_state.bo_data)
     bo_run.data = bo_run.upload_file()
+    if st.session_state.bo_data is not None:
+        st.session_state.bo_data = st.data_editor(st.session_state.bo_data)
     if st.session_state["init_pts"] is not None:
         # Set init points to None if uploaded file is different from init points
         if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
@@ -75,8 +76,8 @@ with run_tab:
 
     # Case 1. File doesn't have any bounds.
     if bo_run.data is not None and not bo_run.bounds_exist:
-        st.session_state.bo_data = bo_run.data
         bo_run.choose_inputs_and_outputs(bo_run.data)
+        st.session_state.bo_data = bo_run.data
 
     # Case 2 and 3. Parse bounds from uploaded file or initial data points
     elif bo_run.data is not None:
@@ -91,7 +92,6 @@ with run_tab:
         bo_run.set_opt_params()
         if bo_run.bounds_exist:
             bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
-        st.session_state.bo_data = st.data_editor(bo_run.data)
 
     if st.button("Run BOSS"):
         if bo_run.data is not None:

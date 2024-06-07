@@ -267,8 +267,8 @@ class RunBOSS:
                 (self.X_next, np.ones(shape=(self.X_next.shape[0], 1)) * np.nan), axis=1
             )
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
-            st.session_state.bo_data = pd.concat([self.data, acq], ignore_index=True)
-            # st.session_state.bo_data = st.session_state.bo_data
+            st.session_state.bo_data = pd.concat([st.session_state.bo_data, acq], ignore_index=True)
+            st.write("Test: Current dataset with new acq ", st.session_state.bo_data)
 
     def download_next_acq(self) -> None:
         if self.res is not None:
