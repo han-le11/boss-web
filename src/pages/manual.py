@@ -1,14 +1,14 @@
 import streamlit as st
-from ui.page_config import PageConfig, customize_footer, remove_toggles
+from ui.page_config import PageConfig, customize_footer
 
 
 page_config = PageConfig(
-    main_title="Tutorial", tab_title="Tutorial", header="Tutorial", icon="📝"
+    main_title="Tutorial",
+    tab_title="Tutorial",
+    header="Tutorial",
 )
 
 page_config.set_page()
-page_config.set_main_title()
-page_config.set_header()
 customize_footer()
 
 st.warning(
