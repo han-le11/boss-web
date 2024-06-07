@@ -6,6 +6,7 @@ page_config = PageConfig(
     main_title="Tutorial",
     tab_title="Tutorial",
     header="Tutorial",
+    icon=None,
 )
 
 page_config.set_page()
