@@ -77,7 +77,6 @@ with run_tab:
     if bo_run.data is not None and not bo_run.bounds_exist:
         st.session_state.bo_data = bo_run.data
         bo_run.choose_inputs_and_outputs(bo_run.data)
-        bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
 
     # Case 2 and 3. Parse bounds from uploaded file or initial data points
     elif bo_run.data is not None:

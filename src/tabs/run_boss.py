@@ -16,16 +16,16 @@ class RunBOSS:
     """
 
     def __init__(
-        self,
-        data=None,
-        bounds=None,
-        bounds_exist=False,
-        X_vals=None,
-        Y_vals=None,
-        X_names=None,
-        min_or_max=None,
-        noise=None,
-        res=None,
+            self,
+            data=None,
+            bounds=None,
+            bounds_exist=False,
+            X_vals=None,
+            Y_vals=None,
+            X_names=None,
+            min_or_max=None,
+            noise=None,
+            res=None,
     ):
         self.data = data  # type: pd.DataFrame or None
         self.bounds = bounds
@@ -70,7 +70,6 @@ class RunBOSS:
         :param df:
             Dataframe read from the UploadedFile object (file uploaded by a user).
         """
-
         if df is not None:
             in_col, out_col = st.columns(2)
             with in_col:
@@ -90,6 +89,8 @@ class RunBOSS:
             self.Y_vals = self.data[self.Y_name]
             self.X_vals = self.X_vals.to_numpy()
             self.Y_vals = self.Y_vals.to_numpy()
+            self.dim = len(self.X_names)
+            self.data = self.data[self.X_names + self.Y_name]
 
     def extract_col_data(self, keyword: str) -> np.array:
         """
@@ -99,7 +100,6 @@ class RunBOSS:
         array: np.array
             An array of the column(s) whose name contains the given keyword.
         """
-        # st.write("data for boss: ", self.data)
         array = self.data.filter(regex=keyword).to_numpy()
         if array.size == 0:
             array = np.array([])
@@ -129,15 +129,16 @@ class RunBOSS:
             st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
         pass
 
-    def _display_input_widgets_X_bounds(
-        self, d, cur_bounds: np.ndarray = None
+    def _display_input_widgets(
+            self, d, cur_bounds: np.ndarray = None
     ) -> (float, float):
         """
         Function to prompt the user to input lower and upper bounds for a variable.
 
         :param d: Current dimension of the variable being considered.
         :param cur_bounds: Default values of lower and upper bounds in input widgets when they first render.
-        :return: Lower and upper bounds set by the user.
+        :return:
+        lower_bound, upper_bound: Lower and upper bounds set by the user.
         """
         left_col, right_col = st.columns(2)
         cur_bounds = np.array([0.0, 0.0]) if cur_bounds is None else cur_bounds
@@ -163,17 +164,17 @@ class RunBOSS:
 
         :param defaults: Default values of lower and upper bounds in input widgets when they first render.
         """
-        if not self.X_names:
-            self.X_names = list(st.session_state.bo_data.columns)[: self.dim]
-        if not self.Y_name:
-            self.Y_name = [st.session_state.bo_data.columns[self.dim]]
-        self.dim = len(self.X_names)
-
         if self.bounds is None:
             self.bounds = np.empty(shape=(self.dim, 2))
+        else:
+            if not self.X_names:
+                self.X_names = list(self.data)[: self.dim]
+            if not self.Y_name:
+                self.Y_name = [self.data.columns[self.dim]]
+        self.dim = len(self.X_names)
         for d in range(self.dim):
             lower_and_upper = np.array([0.0, 0.0]) if defaults is None else defaults[d]
-            lower_b, upper_b = self._display_input_widgets_X_bounds(d, lower_and_upper)
+            lower_b, upper_b = self._display_input_widgets(d, lower_and_upper)
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
 
@@ -265,12 +266,9 @@ class RunBOSS:
             XY_next = np.concatenate(
                 (self.X_next, np.ones(shape=(self.X_next.shape[0], 1)) * np.nan), axis=1
             )
-            st.write("xy next: ", XY_next)
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
-            self.data = pd.concat(
-                [self.data, acq], ignore_index=False
-            )
-            st.write("updated data: ", self.data)
+            st.session_state.bo_data = pd.concat([self.data, acq], ignore_index=True)
+            # st.session_state.bo_data = st.session_state.bo_data
 
     def download_next_acq(self) -> None:
         if self.res is not None:
