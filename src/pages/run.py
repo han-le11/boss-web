@@ -20,7 +20,6 @@ customize_footer()
 remove_toggles()
 
 bo_run = RunBOSS()
-# define session state to store BO run data
 if "bo_data" not in st.session_state:
     st.session_state.bo_data = bo_run.data
 init_data_tab, run_tab, postprocess_tab = st.tabs(
@@ -92,18 +91,17 @@ with run_tab:
         bo_run.parse_bounds(bo_run.data)
         bo_run.input_X_bounds(bo_run.bounds)
         bo_run.set_opt_params()
-        if bo_run.bounds_exist:
-            bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
+        # if bo_run.bounds_exist:
+        #     bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
 
     if st.button("Run BOSS"):
         if bo_run.data is not None:
-            st.session_state.bo_result = None
             bo_run.res = bo_run.run_boss()
             bo_run.concat_next_acq()
             st.session_state["has_run"] = True
             st.rerun()
 
-    if st.session_state["has_run"] is True:
+    if st.session_state["has_run"]:
         bo_run.display_result()
         bo_run.display_next_acq()
 
