@@ -1,5 +1,3 @@
-
-
 def find_bounds(df) -> bool:
     """
     Returns True if there are bounds in the uploaded file; otherwise False.
@@ -15,7 +13,3 @@ def find_bounds(df) -> bool:
             if len(bound_names) != 0:
                 bounds_exist = True
     return bounds_exist
-
-
-
-

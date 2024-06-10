@@ -23,24 +23,46 @@ class RunBOSS:
             X_vals=None,
             Y_vals=None,
             X_names=None,
-            min_or_max=None,
+            min_or_max='Minimize',
             noise=None,
             res=None,
     ):
-        self.data = data  # type: pd.DataFrame or None
+        self.data = data
         self.bounds = bounds
         self.bounds_exist = bounds_exist
-        self.X_vals = X_vals
-        self.X_names = X_names
-        self.Y_vals = Y_vals
+        self.X_names = X_names or []
         self.Y_name = None
         self.dim = None
         self.kernel = "rbf"
         self.min_or_max = min_or_max
         self.noise = noise
-        self.res = res  # type: BOResults or None
         self.X_next = None
         self.arr_next_acq = None
+        self.results = res
+
+    @property
+    def data(self):
+        return st.session_state['bo_data']
+
+    @data.setter
+    def data(self, df):
+        st.session_state['bo_data'] = df
+
+    @property
+    def X_vals(self):
+        return self.data[self.X_names].to_numpy()
+
+    @property
+    def Y_vals(self):
+        return self.data[self.Y_name].to_numpy()
+
+    @property
+    def results(self):
+        return st.session_state['bo_result']
+
+    @results.setter
+    def results(self, new_results):
+        st.session_state['bo_result'] = new_results
 
     def upload_file(self) -> pd.DataFrame:
         """
@@ -63,34 +85,30 @@ class RunBOSS:
                     + ". Please check the file contents and re-upload."
                 )
 
-    def choose_inputs_and_outputs(self, df):
+    def choose_inputs_and_outputs(self):
         """
         Display widgets that let users choose at least one column for input variable(s) and
         only one column for target variable.
         :param df:
             Dataframe read from the UploadedFile object (file uploaded by a user).
         """
-        if df is not None:
-            in_col, out_col = st.columns(2)
-            with in_col:
-                self.X_names = st.multiselect(
-                    "Choose input variables *",
-                    options=list(self.data.columns),
-                    default=None,
-                )
-            with out_col:
-                self.Y_name = st.multiselect(
-                    "Choose one target variable *",
-                    options=list(self.data.columns),
-                    default=None,
-                    max_selections=1,
-                )
-            self.X_vals = self.data[self.X_names]
-            self.Y_vals = self.data[self.Y_name]
-            self.X_vals = self.X_vals.to_numpy()
-            self.Y_vals = self.Y_vals.to_numpy()
-            self.dim = len(self.X_names)
-            self.data = self.data[self.X_names + self.Y_name]
+        in_col, out_col = st.columns(2)
+
+        with in_col:
+            self.X_names = st.multiselect(
+                "Choose input variables *",
+                options=list(self.data.columns),
+                default=None,
+            )
+        with out_col:
+            self.Y_name = st.multiselect(
+                "Choose one target variable *",
+                options=list(self.data.columns),
+                default=None,
+                max_selections=1,
+            )
+        self.dim = len(self.X_names)
+        self.data = self.data[self.X_names + self.Y_name]
 
     def extract_col_data(self, keyword: str) -> np.array:
         """
@@ -214,25 +232,25 @@ class RunBOSS:
             iterpts=0,
         )
         # st.write(f"y min: {self.Y_vals.min()}, y max {self.Y_vals.max()}")
+        
         if self.min_or_max == "Minimize":
-            self.res = bo.run(self.X_vals, self.Y_vals)
+            self.results = bo.run(self.X_vals, self.Y_vals)
         else:
-            self.res = bo.run(self.X_vals, -self.Y_vals)
-        st.session_state["bo_result"] = self.res  # write BO result to session state
-        self.X_next = self.res.get_next_acq(-1)
-        return self.res
+            self.results = bo.run(self.X_vals, -self.Y_vals)
+
+        return self.results
 
     def display_result(self) -> None:
         """
         Display the global optimal location and prediction returned by BOSS.
         """
-        if st.session_state.bo_result is not None:
-            x_glmin = st.session_state.bo_result.select("x_glmin", -1)  # global min location prediction
+        if self.results is not None:
+            x_glmin = self.results.select("x_glmin", -1)  # global min location prediction
             x_glmin = np.around(x_glmin, decimals=3)
             x_glmin = x_glmin.tolist()
 
             # global min prediction from the last iteration
-            mu_glmin = st.session_state.bo_result.select("mu_glmin", -1)
+            mu_glmin = self.results.select("mu_glmin", -1)
             mu_glmin = np.around(mu_glmin, decimals=3)
 
             if self.X_names is not None:
@@ -251,26 +269,28 @@ class RunBOSS:
         """
         Get and display the next acquisition location suggested by BOSS.
         """
-        self.X_next = st.session_state.bo_result.get_next_acq(-1)
-        self.X_next = np.around(self.X_next, decimals=4)
-        if self.X_names:
-            pairs = dict(zip(self.X_names, self.X_next))
-            for key, value in pairs.items():
-                st.success(
-                    f"Next acquisition: \n" f"{key} at {value}",
-                    icon="🔍",
-                )
+        if self.results is not None:
+            X_next = self.results.get_next_acq(-1)
+            X_next = np.around(X_next, decimals=4)
+            if self.X_names:
+                pairs = dict(zip(self.X_names, X_next))
+                for key, value in pairs.items():
+                    st.success(
+                        f"Next acquisition: \n" f"{key} at {value}",
+                        icon="🔍",
+                    )
 
     def concat_next_acq(self):
-        if self.X_next is not None:
+        X_next = self.results.get_next_acq(-1)
+        if X_next is not None:
             XY_next = np.concatenate(
-                (self.X_next, np.ones(shape=(self.X_next.shape[0], 1)) * np.nan), axis=1
+                (X_next, np.ones(shape=(X_next.shape[0], 1)) * np.nan), axis=1
             )
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
-            st.session_state.bo_data = pd.concat([st.session_state.bo_data, acq], ignore_index=True)
+            self.data = pd.concat([self.data, acq], ignore_index=True)
 
     def download_next_acq(self) -> None:
-        if self.res is not None:
+        if self.results is not None:
             df = pd.DataFrame(self.data)
             st.download_button(
                 label="Download",
