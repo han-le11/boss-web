@@ -19,8 +19,10 @@ config.set_page()
 customize_footer()
 remove_toggles()
 
-bo_run = RunBOSS()
-# define session state to store BO run data
+if st.session_state['bo_run'] is None:
+    st.session_state['bo_run'] = RunBOSS()
+
+bo_run = st.session_state['bo_run']
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
@@ -67,7 +69,9 @@ with run_tab:
     #     # Set init points to None if uploaded file is different from init points
     #     if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
     #         st.session_state["init_pts"] = None
-    if not st.session_state['has_run']:
+
+    if not bo_run.has_run:
+
         bo_run.data = bo_run.upload_file()
 
         if bo_run.data is not None:
@@ -89,7 +93,6 @@ with run_tab:
             bo_run.input_X_bounds(bo_run.bounds)
             bo_run.set_opt_params()
     else:
-        print(bo_run.data)
         bo_run.data = st.data_editor(bo_run.data)
         bo_run.display_result()
         bo_run.display_next_acq()
@@ -97,7 +100,7 @@ with run_tab:
     if st.button("Run BOSS"):
         bo_run.run_boss()
         bo_run.concat_next_acq()
-        st.session_state["has_run"] = True
+        bo_run.has_run = True
         st.rerun()
 
     # if st.session_state["has_run"]:
@@ -105,9 +108,9 @@ with run_tab:
     #     bo_run.display_next_acq()
 
 with postprocess_tab:
-    if st.session_state["bo_result"] is not None:
+    if bo_run.results is not None:
         bo_run.display_result()
-        pp = PostprocessingTab(st.session_state["bo_result"], bo_run.X_names)
+        pp = PostprocessingTab(bo_run.results, bo_run.X_names)
         col1, col2 = st.columns(2)
         with col1:
             pp_iters = pp.input_pp_iters()

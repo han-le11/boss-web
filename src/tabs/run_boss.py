@@ -39,14 +39,7 @@ class RunBOSS:
         self.X_next = None
         self.arr_next_acq = None
         self.results = res
-
-    @property
-    def data(self):
-        return st.session_state['bo_data']
-
-    @data.setter
-    def data(self, df):
-        st.session_state['bo_data'] = df
+        self.has_run = False
 
     @property
     def X_vals(self):
@@ -55,14 +48,6 @@ class RunBOSS:
     @property
     def Y_vals(self):
         return self.data[self.Y_name].to_numpy()
-
-    @property
-    def results(self):
-        return st.session_state['bo_result']
-
-    @results.setter
-    def results(self, new_results):
-        st.session_state['bo_result'] = new_results
 
     def upload_file(self) -> pd.DataFrame:
         """
