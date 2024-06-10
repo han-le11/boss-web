@@ -21,8 +21,7 @@ remove_toggles()
 
 bo_run = RunBOSS()
 # define session state to store BO run data
-if "bo_data" not in st.session_state:
-    st.session_state.bo_data = bo_run.data
+
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
 )
@@ -61,51 +60,49 @@ with init_data_tab:
             bo_run.data, st.session_state["names_and_bounds"]
         )
         init.download_init_points(bo_run.data)
-        st.session_state.bo_data = bo_run.data
 
 with run_tab:
-    bo_run.data = bo_run.upload_file()
-    st.write("current data: ", st.session_state.bo_data)
-    if st.session_state.bo_data is not None:
-        st.session_state.bo_data = st.data_editor(st.session_state.bo_data)
-    if st.session_state["init_pts"] is not None:
-        # Set init points to None if uploaded file is different from init points
-        if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
-            st.session_state["init_pts"] = None
-        else:
-            bo_run.data = st.session_state.bo_data   # temporary: give data back to bo_run
-    bo_run.bounds_exist = find_bounds(bo_run.data)
 
-    # Case 1. File doesn't have any bounds.
-    if bo_run.data is not None and not bo_run.bounds_exist:
-        bo_run.choose_inputs_and_outputs(bo_run.data)
-        st.session_state.bo_data = bo_run.data
+    # if st.session_state["init_pts"] is not None:
+    #     # Set init points to None if uploaded file is different from init points
+    #     if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
+    #         st.session_state["init_pts"] = None
+    if not st.session_state['has_run']:
+        bo_run.data = bo_run.upload_file()
 
-    # Case 2 and 3. Parse bounds from uploaded file or initial data points
-    elif bo_run.data is not None:
-        bo_run.X_vals = bo_run.extract_col_data(keyword="input-var")
-        bo_run.Y_vals = bo_run.extract_col_data(keyword="output-var")
-        bo_run.dim = bo_run.X_vals.shape[1]
-        st.session_state.bo_data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
-
-    if bo_run.data is not None and not bo_run.data.isnull().values.all():
-        bo_run.parse_bounds(bo_run.data)
-        bo_run.input_X_bounds(bo_run.bounds)
-        bo_run.set_opt_params()
-        if bo_run.bounds_exist:
-            bo_run.data = bo_run.data.copy(deep=True).iloc[:, : -bo_run.dim]
-
-    if st.button("Run BOSS"):
         if bo_run.data is not None:
-            st.session_state.bo_result = None
-            bo_run.res = bo_run.run_boss()
-            bo_run.concat_next_acq()
-            st.session_state["has_run"] = True
-            st.rerun()
+            # bo_run.data = st.data_editor(st.session_state.bo_data)
+            bo_run.bounds_exist = find_bounds(bo_run.data)
 
-    if st.session_state["has_run"] is True:
+            # Case 1. File doesn't have any bounds.
+            if not bo_run.bounds_exist:
+                bo_run.choose_inputs_and_outputs()
+                bo_run.data = st.data_editor(bo_run.data)
+
+            else: # Case 2 and 3. Parse bounds from uploaded file or initial data points
+                bo_run.X_names = [c for c in bo_run.data.columns if 'input-var' in c]
+                bo_run.Y_name = [c for c in bo_run.data.columns if 'input-var' in c]
+                bo_run.dim = bo_run.X_vals.shape[1]
+                bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
+                bo_run.parse_bounds(bo_run.data)
+
+            bo_run.input_X_bounds(bo_run.bounds)
+            bo_run.set_opt_params()
+    else:
+        print(bo_run.data)
+        bo_run.data = st.data_editor(bo_run.data)
         bo_run.display_result()
         bo_run.display_next_acq()
+
+    if st.button("Run BOSS"):
+        bo_run.run_boss()
+        bo_run.concat_next_acq()
+        st.session_state["has_run"] = True
+        st.rerun()
+
+    # if st.session_state["has_run"]:
+    #     bo_run.display_result()
+    #     bo_run.display_next_acq()
 
 with postprocess_tab:
     if st.session_state["bo_result"] is not None:
