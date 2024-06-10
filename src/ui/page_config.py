@@ -79,6 +79,8 @@ class PageConfig:
     @staticmethod
     def init_states() -> None:
         # Initialization of session states
+        if "has_run" not in st.session_state:
+            st.session_state["has_run"] = False
         if "bo_result" not in st.session_state:
             st.session_state["bo_result"] = None
         if "x_next" not in st.session_state:

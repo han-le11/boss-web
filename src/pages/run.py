@@ -20,8 +20,9 @@ customize_footer()
 remove_toggles()
 
 bo_run = RunBOSS()
+# define session state to store BO run data
 if "bo_data" not in st.session_state:
-    st.session_state.bo_data = st.session_state.bo_data
+    st.session_state.bo_data = bo_run.data
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
 )
@@ -64,6 +65,7 @@ with init_data_tab:
 
 with run_tab:
     bo_run.data = bo_run.upload_file()
+    st.write("current data: ", st.session_state.bo_data)
     if st.session_state.bo_data is not None:
         st.session_state.bo_data = st.data_editor(st.session_state.bo_data)
     if st.session_state["init_pts"] is not None:
@@ -95,10 +97,15 @@ with run_tab:
 
     if st.button("Run BOSS"):
         if bo_run.data is not None:
+            st.session_state.bo_result = None
             bo_run.res = bo_run.run_boss()
-            bo_run.display_result()
-            bo_run.display_next_acq()
             bo_run.concat_next_acq()
+            st.session_state["has_run"] = True
+            st.rerun()
+
+    if st.session_state["has_run"] is True:
+        bo_run.display_result()
+        bo_run.display_next_acq()
 
 with postprocess_tab:
     if st.session_state["bo_result"] is not None:

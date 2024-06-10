@@ -213,7 +213,7 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
-        st.write(f"y min: {self.Y_vals.min()}, y max {self.Y_vals.max()}")
+        # st.write(f"y min: {self.Y_vals.min()}, y max {self.Y_vals.max()}")
         if self.min_or_max == "Minimize":
             self.res = bo.run(self.X_vals, self.Y_vals)
         else:
@@ -226,13 +226,13 @@ class RunBOSS:
         """
         Display the global optimal location and prediction returned by BOSS.
         """
-        if self.res is not None:
-            x_glmin = self.res.select("x_glmin", -1)  # global min location prediction
+        if st.session_state.bo_result is not None:
+            x_glmin = st.session_state.bo_result.select("x_glmin", -1)  # global min location prediction
             x_glmin = np.around(x_glmin, decimals=3)
             x_glmin = x_glmin.tolist()
 
             # global min prediction from the last iteration
-            mu_glmin = self.res.select("mu_glmin", -1)
+            mu_glmin = st.session_state.bo_result.select("mu_glmin", -1)
             mu_glmin = np.around(mu_glmin, decimals=3)
 
             if self.X_names is not None:
@@ -251,7 +251,7 @@ class RunBOSS:
         """
         Get and display the next acquisition location suggested by BOSS.
         """
-        self.X_next = self.res.get_next_acq(-1)
+        self.X_next = st.session_state.bo_result.get_next_acq(-1)
         self.X_next = np.around(self.X_next, decimals=4)
         if self.X_names:
             pairs = dict(zip(self.X_names, self.X_next))
@@ -268,7 +268,6 @@ class RunBOSS:
             )
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
             st.session_state.bo_data = pd.concat([st.session_state.bo_data, acq], ignore_index=True)
-            st.write("Test: Current dataset with new acq ", st.session_state.bo_data)
 
     def download_next_acq(self) -> None:
         if self.res is not None:
