@@ -22,7 +22,7 @@ remove_toggles()
 if st.session_state['bo_run'] is None:
     st.session_state['bo_run'] = RunBOSS()
 
-bo_run = st.session_state['bo_run']
+bo_run: RunBOSS = st.session_state['bo_run']
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
@@ -65,47 +65,53 @@ with init_data_tab:
 
 with run_tab:
 
-    # if st.session_state["init_pts"] is not None:
-    #     # Set init points to None if uploaded file is different from init points
-    #     if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
-    #         st.session_state["init_pts"] = None
-
+    # If we have not run BOSS already we let the user upload data
     if not bo_run.has_run:
+
+        # TODO: use initpts if they exist, need to make some changes
+        # if st.session_state["init_pts"] is not None:
+        #     # Set init points to None if uploaded file is different from init points
+        #     if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
+        #         st.session_state["init_pts"] = None
 
         bo_run.data = bo_run.upload_file()
 
+        # Only continue if some data exists 
         if bo_run.data is not None:
-            # bo_run.data = st.data_editor(st.session_state.bo_data)
             bo_run.bounds_exist = find_bounds(bo_run.data)
 
-            # Case 1. File doesn't have any bounds.
+            # File doesn't have any bounds.
             if not bo_run.bounds_exist:
                 bo_run.choose_inputs_and_outputs()
                 bo_run.data = st.data_editor(bo_run.data)
 
-            else: # Case 2 and 3. Parse bounds from uploaded file or initial data points
+            # Parse bounds from uploaded file or initial data points
+            else: 
                 bo_run.X_names = [c for c in bo_run.data.columns if 'input-var' in c]
                 bo_run.Y_name = [c for c in bo_run.data.columns if 'input-var' in c]
                 bo_run.dim = bo_run.X_vals.shape[1]
                 bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
                 bo_run.parse_bounds(bo_run.data)
 
-            bo_run.input_X_bounds(bo_run.bounds)
-            bo_run.set_opt_params()
+            # if input/output variables have been selected we can 
+            # ask/display bounds and other keywords
+            if len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
+                bo_run.input_X_bounds(bo_run.bounds)
+                bo_run.set_opt_params()
+
+    # BO has been run: only display data editor and results
     else:
         bo_run.data = st.data_editor(bo_run.data)
         bo_run.display_result()
         bo_run.display_next_acq()
 
+    # regardless of whether BO has been run we want to display the run button
     if st.button("Run BOSS"):
         bo_run.run_boss()
         bo_run.concat_next_acq()
         bo_run.has_run = True
+        # call rerun to redraw everything so next acq is visible in data_editor
         st.rerun()
-
-    # if st.session_state["has_run"]:
-    #     bo_run.display_result()
-    #     bo_run.display_next_acq()
 
 with postprocess_tab:
     if bo_run.results is not None:
