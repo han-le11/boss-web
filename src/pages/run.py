@@ -4,6 +4,7 @@ from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from tabs.run_boss import RunBOSS
+from tabs.run_helper import RunHelper
 from ui.file_handler import find_bounds
 from ui.page_config import PageConfig, customize_footer, remove_toggles
 
@@ -14,14 +15,14 @@ config = PageConfig(
     header="Run BO on this page",
     icon=None,
 )
-config.init_states()
 config.set_page()
+config.init_states()
 customize_footer()
 remove_toggles()
 
+# Initialize a session state for RunBOSS if there isn't one
 if st.session_state['bo_run'] is None:
     st.session_state['bo_run'] = RunBOSS()
-
 bo_run: RunBOSS = st.session_state['bo_run']
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
@@ -52,10 +53,10 @@ with init_data_tab:
 
     # Display an editable df for initial points
     if (
-        st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == init.dim + 1
-        and not np.isnan(init_bounds).any()
-        and "" not in list(st.session_state["names_and_bounds"].keys())
+            st.session_state["init_pts"] is not None
+            and len(st.session_state["init_pts"].columns) == init.dim + 1
+            and not np.isnan(init_bounds).any()
+            and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
         # df with bounds, only seen when downloaded, not shown in UI
@@ -65,16 +66,22 @@ with init_data_tab:
         copy = bo_run.data.copy(deep=True)
         init.download_init_points(bo_run.data)
 
-with run_tab:
-    # If we have not run BOSS already we let the user upload data
+    # TODO: implement option to use uploaded file or initial points
+    if (
+            bo_run.data is not None
+            and st.session_state["init_pts"] is not None
+            and not st.session_state["init_pts"].equals(bo_run.data)
+    ):
+        opt = st.selectbox(
+            "Use the uploaded file or the initial points?",
+            ("Use uploaded file", "Use initial points"),
+        )
+
+with (run_tab):
     if not bo_run.has_run:
         bo_run.data = bo_run.upload_file()
-
         # TODO: use initpts if they exist, need to make some changes
         if st.session_state["init_pts"] is not None:
-            # Set init points to None if uploaded file is different from init points
-            # if bo_run.data is not None and not st.session_state["init_pts"].equals(bo_run.data):
-            #     st.session_state["init_pts"] = None
             bo_run.data = copy
 
         # Only continue if some data exists 
@@ -99,7 +106,7 @@ with run_tab:
                 bo_run.input_X_bounds(bo_run.bounds)
                 bo_run.set_opt_params()
         bo_run.data = st.data_editor(bo_run.data)
-    # BO has been run: only display data editor and results
+    # BO has been run: only display results
     else:
         bo_run.data = st.data_editor(bo_run.data)
         bo_run.display_result()
@@ -125,7 +132,7 @@ with postprocess_tab:
         if st.button("Run post-processing"):
             try:
                 post = PPMain(
-                    st.session_state["bo_result"],
+                    bo_run.results,
                     pp_models=True,
                     pp_model_slice=pp_slice,
                     pp_acq_funcs=pp_acq_funcs,
