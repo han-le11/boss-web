@@ -21,9 +21,10 @@ customize_footer()
 remove_toggles()
 
 # Initialize a session state for RunBOSS if there isn't one
-if st.session_state['bo_run'] is None:
-    st.session_state['bo_run'] = RunBOSS()
-bo_run: RunBOSS = st.session_state['bo_run']
+if st.session_state["bo_run"] is None:
+    st.session_state["bo_run"] = RunBOSS()
+bo_run: RunBOSS = st.session_state["bo_run"]
+run_help: RunHelper = RunHelper()
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
@@ -53,10 +54,10 @@ with init_data_tab:
 
     # Display an editable df for initial points
     if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == init.dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+        st.session_state["init_pts"] is not None
+        and len(st.session_state["init_pts"].columns) == init.dim + 1
+        and not np.isnan(init_bounds).any()
+        and "" not in list(st.session_state["names_and_bounds"].keys())
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
         # df with bounds, only seen when downloaded, not shown in UI
@@ -68,23 +69,23 @@ with init_data_tab:
 
     # TODO: implement option to use uploaded file or initial points
     if (
-            bo_run.data is not None
-            and st.session_state["init_pts"] is not None
-            and not st.session_state["init_pts"].equals(bo_run.data)
+        bo_run.data is not None
+        and st.session_state["init_pts"] is not None
+        and not st.session_state["init_pts"].equals(bo_run.data)
     ):
         opt = st.selectbox(
             "Use the uploaded file or the initial points?",
             ("Use uploaded file", "Use initial points"),
         )
 
-with (run_tab):
+with run_tab:
     if not bo_run.has_run:
         bo_run.data = bo_run.upload_file()
         # TODO: use initpts if they exist, need to make some changes
         if st.session_state["init_pts"] is not None:
             bo_run.data = copy
 
-        # Only continue if some data exists 
+        # Only continue if some data exists
         if bo_run.data is not None:
             bo_run.bounds_exist = find_bounds(bo_run.data)
 
@@ -94,23 +95,23 @@ with (run_tab):
 
             # Parse bounds from uploaded file or initial data points
             else:
-                bo_run.X_names = [c for c in bo_run.data.columns if 'input-var' in c]
-                bo_run.Y_name = [c for c in bo_run.data.columns if 'output-var' in c]
+                bo_run.X_names = [c for c in bo_run.data.columns if "input-var" in c]
+                bo_run.Y_name = [c for c in bo_run.data.columns if "output-var" in c]
                 bo_run.dim = bo_run.X_vals.shape[1]
                 bo_run.parse_bounds(bo_run.data)
                 bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
 
-            # if input/output variables have been selected we can 
+            # if input/output variables have been selected we can
             # ask/display bounds and other keywords
             if len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
                 bo_run.input_X_bounds(bo_run.bounds)
                 bo_run.set_opt_params()
-        bo_run.data = st.data_editor(bo_run.data)
     # BO has been run: only display results
     else:
-        bo_run.data = st.data_editor(bo_run.data)
         bo_run.display_result()
         bo_run.display_next_acq()
+    if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
+        bo_run.data = st.data_editor(bo_run.data, key="edit_data")
 
     # regardless of whether BO has been run we want to display the run button
     if st.button("Run BOSS"):
@@ -119,6 +120,10 @@ with (run_tab):
         bo_run.has_run = True
         # call rerun to redraw everything so next acq is visible in data_editor
         st.rerun()
+
+    if bo_run.results is not None:
+        run_help.data = bo_run.data
+        run_help.download()
 
 with postprocess_tab:
     if bo_run.results is not None:
