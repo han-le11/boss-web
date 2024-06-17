@@ -85,5 +85,3 @@ class PageConfig:
             st.session_state["names_and_bounds"] = None
         if "init_pts" not in st.session_state:
             st.session_state["init_pts"] = None
-        for k, v in st.session_state.items():
-            st.session_state[k] = v
