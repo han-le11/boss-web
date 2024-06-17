@@ -6,14 +6,16 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 class RunHelper:
     def __init__(self) -> None:
-        self.res = None
+        self.data = None
 
-    def download_data(self) -> None:
-        if self.res is not None:
-            new_data = self.res.copy(deep=True)
-            st.download_button(
-                label="Download",
-                data=new_data.to_csv(index=False).encode("utf-8"),
-                mime="text/csv",
-                key="download_acq",
-            )
+    def download(self) -> None:
+        st.download_button(
+            label="Download",
+            data=self.data.to_csv(index=False).encode("utf-8"),
+            mime="text/csv",
+            key="download_acq",
+        )
+
+
+
+
