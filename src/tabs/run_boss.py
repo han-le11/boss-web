@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from boss.bo.bo_main import BOMain
-from boss.bo.results import BOResults
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
@@ -16,12 +15,12 @@ class RunBOSS:
     """
 
     def __init__(
-            self,
-            data=None,
-            bounds=None,
-            X_names=None,
-            noise=None,
-            res=None,
+        self,
+        data=None,
+        bounds=None,
+        X_names=None,
+        noise=None,
+        res=None,
     ):
         self.data = data
         self.bounds = bounds
@@ -130,7 +129,7 @@ class RunBOSS:
 
     # TODO: move outside of this class
     def _display_input_widgets(
-            self, d: int, cur_bounds: np.ndarray = None
+        self, d: int, cur_bounds: np.ndarray = None
     ) -> (float, float):
         """
         Function to prompt the user to input lower and upper bounds for a variable.
@@ -166,11 +165,6 @@ class RunBOSS:
         """
         if not self.bounds_exist:
             self.bounds = np.empty(shape=(self.dim, 2))
-        # else:
-        #     if not self.X_names:
-        #         self.X_names = list(self.data)[: self.dim]
-        #     if not self.Y_name:
-        #         self.Y_name = [self.data.columns[self.dim]]
         for d in range(self.dim):
             cur_bounds = np.array([0.0, 0.0]) if not self.bounds_exist else defaults[d]
             lower_b, upper_b = self._display_input_widgets(d, cur_bounds)
@@ -223,7 +217,7 @@ class RunBOSS:
         Display the global optimal location and prediction returned by BOSS.
         """
         if self.results is not None:
-            x_glmin = self.results.select("x_glmin", -1)  # global min location prediction
+            x_glmin = self.results.select("x_glmin", -1)  # global min
             x_glmin = np.around(x_glmin, decimals=3)
             x_glmin = x_glmin.tolist()
 
@@ -266,4 +260,3 @@ class RunBOSS:
             )
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
             self.data = pd.concat([self.data, acq], ignore_index=True)
-
