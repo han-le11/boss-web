@@ -54,10 +54,11 @@ with init_data_tab:
 
     # Display an editable df for initial points
     if (
-        st.session_state["init_pts"] is not None
-        and len(st.session_state["init_pts"].columns) == init.dim + 1
-        and not np.isnan(init_bounds).any()
-        and "" not in list(st.session_state["names_and_bounds"].keys())
+            st.session_state["init_pts"] is not None
+            and len(st.session_state["init_pts"].columns) == init.dim + 1
+            and not np.isnan(init_bounds).any()
+            and "" not in list(st.session_state["names_and_bounds"].keys())
+            and not bo_run.has_run
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
         # df with bounds, only seen when downloaded, not shown in UI
@@ -69,9 +70,9 @@ with init_data_tab:
 
     # TODO: implement option to use uploaded file or initial points
     if (
-        bo_run.data is not None
-        and st.session_state["init_pts"] is not None
-        and not st.session_state["init_pts"].equals(bo_run.data)
+            bo_run.data is not None
+            and st.session_state["init_pts"] is not None
+            and not st.session_state["init_pts"].equals(bo_run.data)
     ):
         opt = st.selectbox(
             "Use the uploaded file or the initial points?",
@@ -84,11 +85,10 @@ with run_tab:
         # TODO: use initpts if they exist, need to make some changes
         if st.session_state["init_pts"] is not None:
             bo_run.data = copy
-
+            st.write("hi")
         # Only continue if some data exists
         if bo_run.data is not None:
             bo_run.bounds_exist = find_bounds(bo_run.data)
-
             # File doesn't have any bounds.
             if not bo_run.bounds_exist:
                 bo_run.choose_inputs_and_outputs()
@@ -106,11 +106,16 @@ with run_tab:
             if len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
                 bo_run.input_X_bounds(bo_run.bounds)
                 bo_run.set_opt_params()
+
     # BO has been run: only display results
     else:
         bo_run.display_result()
         bo_run.display_next_acq()
+
+    # Display an editable dataframe
     if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
+        if st.session_state["init_pts"] is not None:
+            bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
         bo_run.data = st.data_editor(bo_run.data, key="edit_data")
 
     # regardless of whether BO has been run we want to display the run button
@@ -121,7 +126,7 @@ with run_tab:
         # call rerun to redraw everything so next acq is visible in data_editor
         st.rerun()
 
-    if bo_run.results is not None:
+    if bo_run.data is not None and bo_run.results is not None:
         run_help.data = bo_run.data
         run_help.download()
 
