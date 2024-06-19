@@ -80,12 +80,14 @@ with init_data_tab:
         )
 
 with run_tab:
+    file = run_help.upload_file()
+    st.write(file)
     if not bo_run.has_run:
-        bo_run.data = bo_run.upload_file()
         # TODO: use initpts if they exist, need to make some changes
         if st.session_state["init_pts"] is not None:
             bo_run.data = copy
-            st.write("hi")
+        else:
+            bo_run.data = file
         # Only continue if some data exists
         if bo_run.data is not None:
             bo_run.bounds_exist = find_bounds(bo_run.data)
@@ -109,13 +111,18 @@ with run_tab:
 
     # BO has been run: only display results
     else:
+        # if a new file is uploaded, reset to the start
+        if st.session_state["init_pts"] is not None:
+            pass
+        elif file is None or not file.equals(bo_run.data):
+            bo_run.data = None
+            bo_run.has_run = False
         bo_run.display_result()
         bo_run.display_next_acq()
 
     # Display an editable dataframe
     if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
-        if st.session_state["init_pts"] is not None:
-            bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
+        bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
         bo_run.data = st.data_editor(bo_run.data, key="edit_data")
 
     # regardless of whether BO has been run we want to display the run button
@@ -127,8 +134,7 @@ with run_tab:
         st.rerun()
 
     if bo_run.data is not None and bo_run.results is not None:
-        run_help.data = bo_run.data
-        run_help.download()
+        run_help.download(bo_run.data)
 
 with postprocess_tab:
     if bo_run.results is not None:
