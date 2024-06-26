@@ -23,8 +23,18 @@ remove_toggles()
 # Initialize a session state for RunBOSS if there isn't one
 if st.session_state["bo_run"] is None:
     st.session_state["bo_run"] = RunBOSS()
+
+# Initialize a session state for RunHelper if there isn't one
 bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
+
+if st.button("Clear"):
+    bo_run.has_run = False
+    bo_run.data = None
+    st.session_state["bo_run"] = None
+    if st.session_state["init_pts"] is not None:
+        st.session_state["init_pts"] = None
+    st.rerun()
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
@@ -68,26 +78,13 @@ with init_data_tab:
         copy = bo_run.data.copy(deep=True)
         init.download_init_points(bo_run.data)
 
-    # TODO: implement option to use uploaded file or initial points
-    if (
-            bo_run.data is not None
-            and st.session_state["init_pts"] is not None
-            and not st.session_state["init_pts"].equals(bo_run.data)
-    ):
-        opt = st.selectbox(
-            "Use the uploaded file or the initial points?",
-            ("Use uploaded file", "Use initial points"),
-        )
-
 with run_tab:
-    file = run_help.upload_file()
-    st.write(file)
     if not bo_run.has_run:
-        # TODO: use initpts if they exist, need to make some changes
+        bo_run.data = run_help.upload_file()
+        # TODO: use initpts if they exist, need to test
         if st.session_state["init_pts"] is not None:
             bo_run.data = copy
-        else:
-            bo_run.data = file
+
         # Only continue if some data exists
         if bo_run.data is not None:
             bo_run.bounds_exist = find_bounds(bo_run.data)
@@ -111,18 +108,15 @@ with run_tab:
 
     # BO has been run: only display results
     else:
-        # if a new file is uploaded, reset to the start
-        if st.session_state["init_pts"] is not None:
-            pass
-        elif file is None or not file.equals(bo_run.data):
-            bo_run.data = None
-            bo_run.has_run = False
+        bo_run.input_X_bounds(bo_run.bounds)
+        bo_run.set_opt_params()
         bo_run.display_result()
         bo_run.display_next_acq()
 
     # Display an editable dataframe
     if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
         bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
+        st.info("Fill in the empty values or download if you want to continue later.")
         bo_run.data = st.data_editor(bo_run.data, key="edit_data")
 
     # regardless of whether BO has been run we want to display the run button
