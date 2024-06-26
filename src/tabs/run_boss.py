@@ -15,12 +15,12 @@ class RunBOSS:
     """
 
     def __init__(
-        self,
-        data=None,
-        bounds=None,
-        X_names=None,
-        noise=None,
-        res=None,
+            self,
+            data=None,
+            bounds=None,
+            X_names=None,
+            noise=None,
+            res=None,
     ):
         self.data = data
         self.bounds = bounds
@@ -43,30 +43,7 @@ class RunBOSS:
     def Y_vals(self):
         return self.data[self.Y_name].to_numpy()
 
-    # TODO: move outside of this class
-    def upload_file(self) -> pd.DataFrame:
-        """
-        Widget to upload a file, which is read into a dataframe.
-        Display the "help" tip when hovering the mouse over the question mark icon.
-        """
-        self.data = st.file_uploader(
-            label="Restart by uploading a csv file",
-            type=["csv"],
-            help="Your file should contain data for input variables and target variable",
-        )
-        if isinstance(self.data, UploadedFile):
-            try:
-                df = pd.read_csv(self.data, sep=":|;|,")
-                return df
-            except ValueError as err:
-                st.error(
-                    "Error: "
-                    + str(err)
-                    + ". Please check the file contents and re-upload."
-                )
-
-    # TODO: move outside of this class
-    def choose_inputs_and_outputs(self):
+    def choose_inputs_and_outputs(self) -> None:
         """
         If there is no bounds in the uploaded file, display widgets that let users choose at least one column
         for input variable(s) and only one column for target variable.
@@ -86,24 +63,9 @@ class RunBOSS:
                 max_selections=1,
             )
         self.dim = len(self.X_names)
-        # st.write("dimension: ", self.dim)
         self.data = self.data[self.X_names + self.Y_name]
 
-    def extract_col_data(self, keyword: str) -> np.array:
-        """
-        Get the data where column name contains the given keyword.
-        :param keyword:
-            The keyword that the column name should contain.
-        :return:
-        array: np.array
-            An array of the column(s) whose name contains the given keyword.
-        """
-        array = self.data.filter(regex=keyword).to_numpy()
-        if array.size == 0:
-            array = np.array([])
-        return array
-
-    def parse_bounds(self, df):
+    def parse_bounds(self, df) -> None:
         """
         Return the variable names and bounds to run with BOMain object.
         :param df:
@@ -127,9 +89,8 @@ class RunBOSS:
             st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
         pass
 
-    # TODO: move outside of this class
     def _display_input_widgets(
-        self, d: int, cur_bounds: np.ndarray = None
+            self, d: int, cur_bounds: np.ndarray = None
     ) -> (float, float):
         """
         Function to prompt the user to input lower and upper bounds for a variable.
@@ -148,6 +109,7 @@ class RunBOSS:
                 format="%.5f",
                 help="Minimum value of the variable that defines the search space",
                 value=cur_bounds[0],
+                disabled=self.has_run,
             )
         with right_col:
             upper_bound = st.number_input(
@@ -155,10 +117,11 @@ class RunBOSS:
                 format="%.5f",
                 help="Maximum value of the variable that defines the search space",
                 value=cur_bounds[1],
+                disabled=self.has_run,
             )
         return lower_bound, upper_bound
 
-    def input_X_bounds(self, defaults=None):
+    def input_X_bounds(self, defaults=None) -> None:
         """
         Display the number input widgets based on the dimension and input variable names.
         :param defaults: Default values of lower and upper bounds in input widgets when they first render.
@@ -171,7 +134,7 @@ class RunBOSS:
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
 
-    def set_opt_params(self):
+    def set_opt_params(self) -> None:
         """
         Set parameters for minimization/maximization choice and noise variance.
         """
@@ -180,6 +143,7 @@ class RunBOSS:
             self.min_or_max = st.selectbox(
                 "Minimize or maximize the target value?",
                 options=("Minimize", "Maximize"),
+                disabled=self.has_run,
             )
         with col2:
             self.noise = st.number_input(
@@ -187,16 +151,17 @@ class RunBOSS:
                 min_value=0.0,
                 format="%.5f",
                 help="Estimated variance for the Gaussian noise",
+                disabled=self.has_run,
             )
 
-    # TODO
+    # TODO: set advanced parameters for BOSS
     def set_adv_params(self):
         """
         Set advanced, optional parameters.
         """
         pass
 
-    def run_boss(self):
+    def run_boss(self) -> None:
         bo = BOMain(
             f=dummy_func,
             bounds=self.bounds,
@@ -204,13 +169,11 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
-        # st.write(f"y min: {self.Y_vals.min()}, y max {self.Y_vals.max()}")
         if self.min_or_max == "Minimize":
+
             self.results = bo.run(self.X_vals, self.Y_vals)
         else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
-
-        return self.results
 
     def display_result(self) -> None:
         """
@@ -252,7 +215,7 @@ class RunBOSS:
                         icon="🔍",
                     )
 
-    def concat_next_acq(self):
+    def concat_next_acq(self) -> None:
         X_next = self.results.get_next_acq(-1)
         if X_next is not None:
             XY_next = np.concatenate(
