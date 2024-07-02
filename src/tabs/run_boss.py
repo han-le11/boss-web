@@ -223,3 +223,16 @@ class RunBOSS:
             )
             acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
             self.data = pd.concat([self.data, acq], ignore_index=True)
+
+    @st.experimental_dialog("Are you sure you want to clear the data?")
+    def clear_data(self) -> None:
+        if st.button("Yes"):
+            self.has_run = False
+            self.data = None
+            self.results = None
+            st.session_state["bo_run"] = None
+            if st.session_state["init_pts"] is not None:
+                st.session_state["init_pts"] = None
+            st.rerun()
+        elif st.button("No"):
+            st.rerun()
