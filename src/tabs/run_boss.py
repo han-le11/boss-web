@@ -170,7 +170,6 @@ class RunBOSS:
             iterpts=0,
         )
         if self.min_or_max == "Minimize":
-
             self.results = bo.run(self.X_vals, self.Y_vals)
         else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
@@ -227,7 +226,6 @@ class RunBOSS:
     @st.experimental_dialog("Are you sure you want to clear the data?")
     def clear_data(self) -> None:
         if st.button("Yes"):
-            self.has_run = False
             self.data = None
             self.results = None
             st.session_state["bo_run"] = None
