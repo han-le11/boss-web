@@ -28,13 +28,9 @@ if st.session_state["bo_run"] is None:
 bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
 
-if st.button("Clear"):
-    bo_run.has_run = False
-    bo_run.data = None
-    st.session_state["bo_run"] = None
-    if st.session_state["init_pts"] is not None:
-        st.session_state["init_pts"] = None
-    st.rerun()
+
+if st.button("Clean and restart"):
+    bo_run.clear_data()
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
