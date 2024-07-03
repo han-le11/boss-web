@@ -76,10 +76,11 @@ with init_data_tab:
 
 with run_tab:
     if not bo_run.has_run:
-        bo_run.data = run_help.upload_file()
         # TODO: use initpts if they exist, need to test
         if st.session_state["init_pts"] is not None:
             bo_run.data = copy
+        else:
+            bo_run.data = run_help.upload_file()
 
         # Only continue if some data exists
         if bo_run.data is not None:
