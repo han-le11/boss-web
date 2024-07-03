@@ -162,16 +162,16 @@ class RunBOSS:
         pass
 
     def run_boss(self) -> None:
-        if self.bounds is not None:
-            bo = BOMain(
-                f=dummy_func,
-                bounds=self.bounds,
-                kernel=self.kernel,
-                noise=self.noise,
-                iterpts=0,
-            )
-        else:
-            st.warning("⚠️ Please give valid bounds.")
+        """
+        Run BOSS with the given parameters.
+        """
+        bo = BOMain(
+            f=dummy_func,
+            bounds=self.bounds,
+            kernel=self.kernel,
+            noise=self.noise,
+            iterpts=0,
+        )
         if self.min_or_max == "Minimize":
             self.results = bo.run(self.X_vals, self.Y_vals)
         else:
@@ -220,6 +220,9 @@ class RunBOSS:
         #     st.warning("⚠️ No optimization results available. Please run BOSS first.")
 
     def concat_next_acq(self) -> None:
+        """
+        Concatenate the next acquisition location to the data table.
+        """
         if self.results is not None:
             X_next = self.results.get_next_acq(-1)
             if X_next is not None:
@@ -231,12 +234,19 @@ class RunBOSS:
 
     @st.experimental_dialog("Are you sure you want to clear the data?")
     def clear_data(self) -> None:
-        if st.button("Yes"):
-            self.data = None
-            self.results = None
-            st.session_state["bo_run"] = None
-            if st.session_state["init_pts"] is not None:
-                st.session_state["init_pts"] = None
-            st.rerun()
-        elif st.button("No", type="primary"):
-            st.rerun()
+        """
+        Clear all data.
+        """
+        left, right = st.columns(2)
+        with left:
+            if st.button("Yes"):
+                self.data = None
+                self.results = None
+                st.session_state["bo_run"] = None
+                if st.session_state["init_pts"] is not None:
+                    st.session_state["init_pts"] = None
+                st.rerun()
+        with right:
+            if st.button("No", type="primary"):
+                # rerun to close the dialog programmatically
+                st.rerun()
