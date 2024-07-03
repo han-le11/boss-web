@@ -29,7 +29,7 @@ bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
 
 
-if st.button("Clean and restart"):
+if st.button("Clear and restart"):
     bo_run.clear_data()
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
@@ -111,8 +111,8 @@ with run_tab:
 
     # Display an editable dataframe
     if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
-        bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
-        st.info("Fill in the empty values or download if you want to continue later.")
+        # bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
+        st.info("Fill in the empty cells or download if you want to continue later.")
         bo_run.data = st.data_editor(bo_run.data, key="edit_data")
 
     # regardless of whether BO has been run we want to display the run button
