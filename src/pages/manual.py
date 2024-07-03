@@ -17,3 +17,8 @@ st.warning(
     "happens.",
     icon="⚠️",
 )
+
+st.title("File")
+st.markdown("The uploaded csv file should use colon or semicolon as separator. "
+            "The file must contain data for input variables and target variable.")
+
