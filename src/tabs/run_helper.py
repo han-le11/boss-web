@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from pandas.errors import ParserError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
@@ -7,11 +8,6 @@ class RunHelper:
     def __init__(self) -> None:
         self.file = None
         self.data = None
-        self.bo_has_run = False
-
-    def update_has_run(self):
-        if self.bo_has_run:
-            self.bo_has_run = False
 
     def upload_file(self) -> pd.DataFrame:
         """
@@ -25,13 +21,13 @@ class RunHelper:
         )
         if isinstance(self.file, UploadedFile):
             try:
-                df = pd.read_csv(self.file, sep=":|;|,")
+                df = pd.read_csv(self.file, sep=";|,")
                 return df
-            except ValueError as err:
+            except ParserError as err:
                 st.error(
                     "Error: "
                     + str(err)
-                    + ". Please check the file contents and re-upload."
+                    + " Please check the file contents and re-upload."
                 )
 
     @staticmethod
