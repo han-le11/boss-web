@@ -29,7 +29,7 @@ bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
 
 
-if st.button("Clear and restart"):
+if st.button("Clear results"):
     bo_run.clear_data()
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
