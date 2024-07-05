@@ -81,7 +81,7 @@ class PageConfig:
         # Initialization of session states
         if "bo_run" not in st.session_state:
             st.session_state["bo_run"] = None
-        if "names_and_bounds" not in st.session_state:
-            st.session_state["names_and_bounds"] = None
+        if "init_names_and_bounds" not in st.session_state:
+            st.session_state["init_names_and_bounds"] = None
         if "init_pts" not in st.session_state:
             st.session_state["init_pts"] = None
