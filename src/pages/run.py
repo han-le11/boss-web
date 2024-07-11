@@ -28,9 +28,8 @@ if st.session_state["bo_run"] is None:
 bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
 
-
-if st.button("Clear results"):
-    bo_run.clear_data()
+if st.button("Clear all"):
+    run_help.clear_data()
 
 init_data_tab, run_tab, postprocess_tab = st.tabs(
     ["Create initial data", "Run BOSS", "Post-processing"]
@@ -39,13 +38,14 @@ init_data_tab, run_tab, postprocess_tab = st.tabs(
 with init_data_tab:
     init = InitManagerTab()
     init_type, initpts = init.set_page()
-    init_bounds, st.session_state["names_and_bounds"] = set_input_var_bounds(init.dim)
+    # init_bounds, st.session_state["init_names_and_bounds"] = set_input_var_bounds(init.dim)
+    init_bounds = set_input_var_bounds(init.dim)
 
     if st.button("Generate points"):
         if np.isnan(init_bounds).any():
-            st.error("Error: Please input valid names and bounds for all variables.")
-        if len(list(st.session_state["names_and_bounds"].keys())) != init.dim + 1:
-            st.error("Error: Please give a distinct name for each variable.")
+            st.error("Please give valid names and bounds for all variables.")
+        if len(list(st.session_state["init_names_and_bounds"].keys())) != init.dim + 1:
+            st.error("Please give a distinct name for each variable.")
         else:
             init_manager = init.set_init_manager(
                 init_type,
@@ -55,7 +55,7 @@ with init_data_tab:
             init_pts = init_manager.get_all()
             # concatenate an empty column for target values to df and save to session state
             st.session_state["init_pts"] = init.add_var_names(
-                init_pts, st.session_state["names_and_bounds"]
+                init_pts, st.session_state["init_names_and_bounds"]
             )
 
     # Display an editable df for initial points
@@ -63,20 +63,20 @@ with init_data_tab:
             st.session_state["init_pts"] is not None
             and len(st.session_state["init_pts"].columns) == init.dim + 1
             and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["names_and_bounds"].keys())
+            and "" not in list(st.session_state["init_names_and_bounds"].keys())
             and not bo_run.has_run
     ):
         bo_run.data = st.data_editor(st.session_state["init_pts"])
         # df with bounds, only seen when downloaded, not shown in UI
         bo_run.data = init.add_bounds_to_dataframe(
-            bo_run.data, st.session_state["names_and_bounds"]
+            bo_run.data, st.session_state["init_names_and_bounds"]
         )
         copy = bo_run.data.copy(deep=True)
         init.download_init_points(bo_run.data)
 
 with run_tab:
     if not bo_run.has_run:
-        # TODO: use initpts if they exist, need to test
+        # Use init points if they exist. Otherwise, use uploaded file.
         if st.session_state["init_pts"] is not None:
             bo_run.data = copy
         else:
@@ -112,20 +112,21 @@ with run_tab:
 
     # Display an editable dataframe
     if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
-        # bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
-        st.info("Fill in the empty cells or download if you want to continue later.")
         bo_run.data = st.data_editor(bo_run.data, key="edit_data")
+        bo_run.download()
 
     # regardless of whether BO has been run we want to display the run button
-    if st.button("Run BOSS"):
-        bo_run.run_boss()
-        bo_run.concat_next_acq()
-        bo_run.has_run = True
-        # call rerun to redraw everything so next acq is visible in data_editor
-        st.rerun()
+    if st.button("Run BOSS", type="primary"):
+        try:
+            bo_run.validate_bounds()
+            bo_run.run_boss()
+            bo_run.has_run = True
+            bo_run.concat_next_acq()
+            # call rerun to redraw everything so next acq is visible in data_editor
+            st.rerun()
+        except TypeError:
+            st.error("Fill in the empty cells or download if you want to continue later.")
 
-    if bo_run.data is not None and bo_run.results is not None:
-        run_help.download(bo_run.data)
 
 with postprocess_tab:
     if bo_run.results is not None:
@@ -137,18 +138,15 @@ with postprocess_tab:
 
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
         if st.button("Run post-processing"):
-            try:
-                post = PPMain(
-                    bo_run.results,
-                    pp_models=True,
-                    pp_model_slice=pp_slice,
-                    pp_acq_funcs=pp_acq_funcs,
-                )
-                post.run()
-                pp.display_model_and_uncertainty()
-                pp.display_acqfns()
-            except AttributeError:
-                st.error("Have you run BOSS first in the tab Run BOSS?")
+            post = PPMain(
+                bo_run.results,
+                pp_models=True,
+                pp_model_slice=pp_slice,
+                pp_acq_funcs=pp_acq_funcs,
+            )
+            post.run()
+            pp.display_model_and_uncertainty()
+            pp.display_acqfns()
     else:
         st.warning(
             "⚠️ No optimization results available. Please optimize first in the tab Run BOSS."
