@@ -4,10 +4,16 @@ from pandas.errors import ParserError
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
+def reset():
+    st.session_state.input_key += 1
+    st.session_state["bo_run"] = None
+    st.session_state["init_names_and_bounds"] = None
+    st.session_state["init_pts"] = None
+
+
 class RunHelper:
     def __init__(self) -> None:
         self.file = None
-        self.data = None
 
     def upload_file(self) -> pd.DataFrame:
         """
@@ -18,7 +24,9 @@ class RunHelper:
             label="Restart by uploading a csv file",
             type=["csv"],
             help="Your file should contain data for input variables and target variable",
+            key=f"uploader_{st.session_state.input_key}"
         )
+
         if isinstance(self.file, UploadedFile):
             try:
                 df = pd.read_csv(self.file, sep=";|,")
@@ -30,11 +38,17 @@ class RunHelper:
                     + " Please check the file contents and re-upload."
                 )
 
-    @staticmethod
-    def download(df) -> None:
-        st.download_button(
-            label="Download",
-            data=df.to_csv(index=False).encode("utf-8"),
-            mime="text/csv",
-            key="download_acq",
-        )
+    @st.experimental_dialog("Are you sure you want to clear the data?")
+    def clear_data(self) -> None:
+        """
+        Clear all input data and BOSS optimization results.
+        """
+        # Make 2 placeholders to display the buttons.
+        left, right = st.columns([1, 5])
+        with left:
+            if st.button("Yes", on_click=reset):
+                # rerun to close the dialog programmatically
+                st.rerun()
+        with right:
+            if st.button("No", type="primary"):
+                st.rerun()
