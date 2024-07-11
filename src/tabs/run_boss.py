@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from boss.bo.bo_main import BOMain
-from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
 def dummy_func(_):
@@ -34,13 +33,28 @@ class RunBOSS:
         self.X_next = None
         self.results = res
         self.has_run = False
+        self.dload_data = None  # data for download
 
     @property
     def X_vals(self):
+        """
+        Return the input values.
+
+        :return:
+        X_vals: ndarray
+            Numpy array of the X values.
+        """
         return self.data[self.X_names].to_numpy()
 
     @property
     def Y_vals(self):
+        """
+        Return the output values.
+
+        :return:
+        Y_vals: ndarray
+            Numpy array of the Y values.
+        """
         return self.data[self.Y_name].to_numpy()
 
     def choose_inputs_and_outputs(self) -> None:
@@ -68,71 +82,80 @@ class RunBOSS:
     def parse_bounds(self, df) -> None:
         """
         Return the variable names and bounds to run with BOMain object.
+
         :param df:
             Uploaded file, which is read into a dataframe.
+
         :return:
-            tp_bounds_array: numpy array of the bounds
+        tp_bounds_array: ndarray
+            Transposed numpy array of the bounds
         """
         bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
         self.bounds = np.transpose(bounds_array)
         self.dim = self.bounds.shape[0]
-
-    # TODO: check if the lower bound is smaller than the upper bound
-    def _check_bounds(self, lower_bound, upper_bound):
-        """
-        Check if the lower bound is smaller than the upper bound.
-        :param lower_bound:
-        :param upper_bound:
-        :return:
-        """
-        if not lower_bound < upper_bound:
-            st.error("⚠️ Warning: lower bound has to be smaller than upper bound.")
-        pass
 
     def _display_input_widgets(
             self, d: int, cur_bounds: np.ndarray = None
     ) -> (float, float):
         """
         Function to prompt the user to input lower and upper bounds for a variable.
-        :param d:
+
+        :param d: int
             Current dimension of the variable being considered.
-        :param cur_bounds:
+        :param cur_bounds: ndarray
             Default values of lower and upper bounds in input widgets when they first render.
+
         :return:
-        lower_bound, upper_bound: Lower and upper bounds set by the user.
+        lower_bound, upper_bound: (float, float)
+            The lower and upper bounds set by the user.
         """
-        left_col, right_col = st.columns(2)
-        cur_bounds = np.array([0.0, 0.0]) if cur_bounds is None else cur_bounds
-        with left_col:
-            lower_bound = st.number_input(
+        left, right = st.columns(2)
+
+        # Display None if file doesn't contain bounds. Otherwise, use the bounds from file.
+        with left:
+            lower = st.number_input(
                 "Lower bound of {var}".format(var=self.X_names[d]),
-                format="%.5f",
+                format="%.3f",
                 help="Minimum value of the variable that defines the search space",
-                value=cur_bounds[0],
+                value=None if cur_bounds is None else cur_bounds[0],
                 disabled=self.has_run,
             )
-        with right_col:
-            upper_bound = st.number_input(
+        with right:
+            upper = st.number_input(
                 "Upper bound of {var}".format(var=self.X_names[d]),
-                format="%.5f",
+                format="%.3f",
                 help="Maximum value of the variable that defines the search space",
-                value=cur_bounds[1],
+                value=None if cur_bounds is None else cur_bounds[1],
                 disabled=self.has_run,
             )
-        return lower_bound, upper_bound
+        return lower, upper
 
     def input_X_bounds(self, defaults=None) -> None:
         """
         Display the number input widgets based on the dimension and input variable names.
-        :param defaults: Default values of lower and upper bounds in input widgets when they first render.
+
+        :param defaults: None or ndarray
+            Default values of lower and upper bounds in input widgets when they first render.
         """
         if not self.bounds_exist:
             self.bounds = np.empty(shape=(self.dim, 2))
         for d in range(self.dim):
-            cur_bounds = np.array([0.0, 0.0]) if not self.bounds_exist else defaults[d]
+            cur_bounds = None if not self.bounds_exist else defaults[d]
             lower_b, upper_b = self._display_input_widgets(d, cur_bounds)
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
+
+    def validate_bounds(self) -> None:
+        """
+        For each variable, check if the lower bound is smaller than the upper bound.
+
+        :return: None
+        """
+        for d in range(self.dim):
+            if self.bounds[d][0] is None or self.bounds[d][1] is None:
+                st.error("⚠️ Fill in any empty bound.")
+            if not self.bounds[d][0] < self.bounds[d][1]:
+                st.error("⚠️ Lower bound has to be smaller than upper bound.")
 
     def set_opt_params(self) -> None:
         """
@@ -153,13 +176,6 @@ class RunBOSS:
                 help="Estimated variance for the Gaussian noise",
                 disabled=self.has_run,
             )
-
-    # TODO: set advanced parameters for BOSS
-    def set_adv_params(self):
-        """
-        Set advanced, optional parameters.
-        """
-        pass
 
     def run_boss(self) -> None:
         """
@@ -216,8 +232,6 @@ class RunBOSS:
                         f"Next acquisition: \n" f"{key} at {value}",
                         icon="🔍",
                     )
-        # else:
-        #     st.warning("⚠️ No optimization results available. Please run BOSS first.")
 
     def concat_next_acq(self) -> None:
         """
@@ -226,27 +240,40 @@ class RunBOSS:
         if self.results is not None:
             X_next = self.results.get_next_acq(-1)
             if X_next is not None:
-                XY_next = np.concatenate(
-                    (X_next, np.ones(shape=(X_next.shape[0], 1)) * np.nan), axis=1
-                )
+                XY_next = np.concatenate((X_next, np.ones(shape=(X_next.shape[0], 1)) * np.nan), axis=1)
                 acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
                 self.data = pd.concat([self.data, acq], ignore_index=True)
 
-    @st.experimental_dialog("Are you sure you want to clear the data?")
-    def clear_data(self) -> None:
+    def add_bounds(self) -> None:
         """
-        Clear all data.
+        Add the bounds to the data table, only used when downloading data.
         """
-        left, right = st.columns(2)
-        with left:
-            if st.button("Yes"):
-                self.data = None
-                self.results = None
-                st.session_state["bo_run"] = None
-                if st.session_state["init_pts"] is not None:
-                    st.session_state["init_pts"] = None
-                st.rerun()
-        with right:
-            if st.button("No", type="primary"):
-                # rerun to close the dialog programmatically
-                st.rerun()
+        var_names = self.X_names + self.Y_name  # store column names for the final df
+
+        # add "output-var " in front of output variable name so the file will be parsed correctly later
+        if not self.bounds_exist:
+            var_names[-1] = "output-var " + self.Y_name[0]
+        bounds_arr = np.zeros(shape=(self.data.shape[0], self.dim)) * np.nan
+
+        for d in range(self.dim):
+            # filling the bounds array
+            bounds_arr[0, d] = self.bounds[d][0]
+            bounds_arr[1, d] = self.bounds[d][1]
+            if not self.bounds_exist:
+                var_names[d] = "input-var " + self.X_names[d]
+
+            bound_name = self.X_names[d].removeprefix("input-var ")
+            var_names.append(f"boss-bound {bound_name}")  # store column names for the returned df
+
+        data = np.concatenate((self.data, bounds_arr), axis=1)
+        self.dload_data = pd.DataFrame(data=data, columns=var_names)
+
+    def download(self) -> None:
+        self.add_bounds()
+        st.download_button(
+            label="Download",
+            data=self.dload_data.to_csv(index=False).encode("utf-8"),
+            file_name="boss_data.csv",
+            mime="text/csv",
+            key="download_data",
+        )
