@@ -79,6 +79,8 @@ class PageConfig:
     @staticmethod
     def init_states() -> None:
         # Initialization of session states
+        if "input_key" not in st.session_state:
+            st.session_state.input_key = 0
         if "bo_run" not in st.session_state:
             st.session_state["bo_run"] = None
         if "init_names_and_bounds" not in st.session_state:
