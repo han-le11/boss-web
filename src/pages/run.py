@@ -89,12 +89,12 @@ with run_tab:
             if not bo_run.bounds_exist:
                 bo_run.choose_inputs_and_outputs()
 
-            # Parse bounds from uploaded file or initial data points
+            # Parse parameters from uploaded file or initial data points
             else:
                 bo_run.X_names = [c for c in bo_run.data.columns if "input-var" in c]
                 bo_run.Y_name = [c for c in bo_run.data.columns if "output-var" in c]
                 bo_run.dim = bo_run.X_vals.shape[1]
-                bo_run.parse_bounds(bo_run.data)
+                bo_run.parse_params(bo_run.data)
                 bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
 
             # if input/output variables have been selected we can
@@ -103,7 +103,7 @@ with run_tab:
                 bo_run.input_X_bounds(bo_run.bounds)
                 bo_run.set_opt_params()
 
-    # BO has been run: only display results
+    # BO has been run: disable input widgets and only display results
     else:
         bo_run.input_X_bounds(bo_run.bounds)
         bo_run.set_opt_params()
@@ -117,8 +117,9 @@ with run_tab:
 
     # regardless of whether BO has been run we want to display the run button
     if st.button("Run BOSS", type="primary"):
+        run_help.verify_bounds(bo_run.dim, bo_run.bounds)
+        bo_run.verify_params()
         try:
-            bo_run.validate_bounds()
             bo_run.run_boss()
             bo_run.has_run = True
             bo_run.concat_next_acq()
