@@ -58,7 +58,7 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
         )
         y_name = "output-var " + y_name
     st.session_state["init_names_and_bounds"][y_name] = None  # for target values, bounds are assigned None
-    return bounds #, names_and_bounds
+    return bounds
 
 
 class InitManagerTab:
@@ -144,9 +144,6 @@ class InitManagerTab:
             A dataframe containing initial points and an empty column for recording the target variable.
         """
         var_names = list(names_and_bounds.keys())
-        # if "" in var_names:
-        #     st.error("Please give a name for each variable.")
-        # else:
         empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
         # concatenate an empty column to record the target values
         xy_data = np.concatenate((init_arr, empty_y_vals_col), axis=1)
