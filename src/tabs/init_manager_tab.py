@@ -7,13 +7,18 @@ from boss.bo.initmanager import InitManager
 def set_input_var_bounds(dimension: int) -> (np.array, dict):
     """
     Return an array of input bounds and a dictionary of variable names and corresponding bounds.
-    :param dimension: dimension of the input values
+
+    :param dimension: int
+        dimension of the input values
+
     :return:
-    bounds: input bounds, which is used to generate initial points with InitManager.
-    names_and_bounds: a dictionary of variable names (keys) and corresponding bounds (values).
+    bounds: ndarray
+        An array of input bounds, which is used to generate initial points with InitManager.
+    names_and_bounds: dict
+        A dictionary of variable names (keys) and corresponding bounds (values).
     """
     bounds = np.ones(shape=(dimension, 2)) * np.nan
-    names_and_bounds = dict()
+    st.session_state["init_names_and_bounds"] = dict()
     for d in range(dimension):
         col1, col2, col3 = st.columns(3, gap="large")
         with col1:
@@ -21,7 +26,7 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
                 f"Please write the name of variable {d + 1}",
                 max_chars=50,
                 help="A descriptive name will be great!",
-                key=f"var {d}",
+                key=f"var_{d}_{st.session_state.input_key}",
             )
 
             if var_name:
@@ -40,19 +45,20 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
                         key=f"upper {d}",
                         value=None,
                     )
-                names_and_bounds.update({var_name: bounds[d, :]})
+                st.session_state["init_names_and_bounds"].update({var_name: bounds[d, :]})
 
-    # Make a widget to input target variable name
+    # Make one widget to input target variable name
     col1, col2, col3 = st.columns(3, gap="large")
     with col1:
-        y_val_name = st.text_input(
+        y_name = st.text_input(
             f"Write the name of the target variable",
             max_chars=50,
             help="A descriptive name will be great!",
+            key=f"target_{st.session_state.input_key}",
         )
-        y_val_name = "output-var " + y_val_name
-    names_and_bounds[y_val_name] = None  # for target values, bounds are assigned None
-    return bounds, names_and_bounds
+        y_name = "output-var " + y_name
+    st.session_state["init_names_and_bounds"][y_name] = None  # for target values, bounds are assigned None
+    return bounds #, names_and_bounds
 
 
 class InitManagerTab:
@@ -68,12 +74,13 @@ class InitManagerTab:
             "values of the target variable. "
             "Then, you can optimize with this data in tab Run BOSS."
         )
-        right, centre, left = st.columns(3, gap="large")
-        with right:
-            init_type = st.selectbox(
-                "Select the type of initial points",
-                options=("sobol", "random", "grid"),
-                help="Select method for creating the initial sampling locations",
+        left, centre, right = st.columns(3, gap="large")
+        with left:
+            self.dim = st.number_input(
+                "Choose the dimension of the search space",
+                value=2,  # When this widget first renders, its value is 2.
+                min_value=1,
+                step=1,
             )
         with centre:
             initpts = st.number_input(
@@ -83,34 +90,42 @@ class InitManagerTab:
                 step=1,
                 help="The number of initial data points to create",
             )
-        with left:
-            self.dim = st.number_input(
-                "Choose the dimension of the search space",
-                value=2,  # When this widget first renders, its value is 2.
-                min_value=1,
-                step=1,
+        with right:
+            init_type = st.selectbox(
+                "Select the type of initial points",
+                options=("sobol", "random", "grid"),
+                help="Select method for creating the initial sampling locations",
             )
         return init_type, initpts
 
     @staticmethod
-    def set_init_manager(init_type, initpts, bounds) -> InitManager:
+    def set_init_manager(init_type: str, initpts: int, bounds) -> InitManager:
         """
-        Return an InitManager object of the BOSS package.
-        :param init_type: the method of generating initial points
-        :param initpts: number of initial data points
-        :param bounds: bounds of all variables
+        Return an InitManager instance of the InitManager class (from BOSS library).
+
+        :param init_type: str
+            The method of generating initial points.
+        :param initpts: int
+            The number of initial data points.
+        :param bounds:
+            The bounds of all variables.
+
         :return:
+        InitManager
+        An instance of the InitManager class
         """
         return InitManager(inittype=init_type,
                            initpts=initpts,
                            bounds=bounds,)
 
     @staticmethod
-    def download_init_points(points_array) -> None:
-        df = pd.DataFrame(points_array)
-        data = df.to_csv(index=False).encode("utf-8")
+    def download_init_points(arr) -> None:
+        if not isinstance(arr, pd.DataFrame):
+            arr = pd.DataFrame(arr)
+        data = arr.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="Download",
+            file_name="boss_init.csv",
             data=data,
             mime="text/csv",
         )
@@ -119,38 +134,47 @@ class InitManagerTab:
     def add_var_names(init_arr, names_and_bounds) -> pd.DataFrame:
         """
         Return a dataframe with tabulated variable names and corresponding bounds.
-        :param init_arr: numpy array of initial points.
-        :param names_and_bounds: dictionary
-        :return:
-            df: dataframe containing initial points and an empty column for recording the target variable.
+
+        :param init_arr: ndarray
+            An array of initial points.
+        :param names_and_bounds: dict
+            A dictionary of variable names (key) and bounds (value).
+
+        :return df: pd.DataFrame
+            A dataframe containing initial points and an empty column for recording the target variable.
         """
         var_names = list(names_and_bounds.keys())
-        if "" in var_names:
-            st.error("Please give a name for each variable.")
-        else:
-            empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
-            # concatenate an empty column to record the target values
-            xy_data = np.concatenate((init_arr, empty_y_vals_col), axis=1)
-            df = pd.DataFrame(data=xy_data, columns=var_names)
-            return df
+        # if "" in var_names:
+        #     st.error("Please give a name for each variable.")
+        # else:
+        empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
+        # concatenate an empty column to record the target values
+        xy_data = np.concatenate((init_arr, empty_y_vals_col), axis=1)
+        df = pd.DataFrame(data=xy_data, columns=var_names)
+        return df
 
     @staticmethod
-    def add_bounds_to_dataframe(init_df, names_and_bounds) -> pd.DataFrame:
+    def add_bounds_to_dataframe(df, names_and_bounds) -> pd.DataFrame:
         """
         This dataframe is not shown to the user. It's only used to concatenate the
         input bounds to the dataframe of generated initial points.
-        :param init_df: dataframe of initial points and recorded target values
-        :param names_and_bounds: dictionary of variable names (key) and bounds (value)
-        :return:
+
+        :param df: pd.DataFrame
+            A dataframe to be concatenated.
+        :param names_and_bounds:
+            A dictionary of variable names (key) and bounds (value).
+
+        :return final_df: pd.DataFrame
+            A dataframe of tabular data and concatenated bounds.
         """
-        if init_df is None:
-            st.warning("Error: Please input variable names and bounds.")
+        if df is None:
+            st.warning("Please input variable names and bounds.")
         elif "" in list(names_and_bounds.keys()):
             st.error("Please give a name for each variable.")
         else:
             var_names = [s for s in list(names_and_bounds.keys())]
             dimension = len(var_names) - 1
-            num_init_points = init_df.shape[0]
+            num_init_points = df.shape[0]
             bounds = np.zeros(shape=(num_init_points, dimension)) * np.nan
             df_col_names = var_names  # store column names for the final df
 
@@ -163,6 +187,6 @@ class InitManagerTab:
                 bounds[0, n] = bound_n[0]
                 bounds[1, n] = bound_n[1]
 
-            final_array = np.concatenate((init_df, bounds), axis=1)
+            final_array = np.concatenate((df, bounds), axis=1)
             final_df = pd.DataFrame(data=final_array, columns=df_col_names)
             return final_df
