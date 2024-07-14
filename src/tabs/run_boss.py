@@ -28,7 +28,7 @@ class RunBOSS:
         self.Y_name = None
         self.dim = None
         self.kernel = "rbf"
-        self.min_or_max = "Minimize"
+        self.min_max = "Minimize"  # whether to minimize or maximize
         self.noise = noise
         self.X_next = None
         self.results = res
@@ -61,6 +61,8 @@ class RunBOSS:
         """
         If there is no bounds in the uploaded file, display widgets that let users choose at least one column
         for input variable(s) and only one column for target variable.
+
+        :return: None
         """
         in_col, out_col = st.columns(2)
         with in_col:
@@ -79,20 +81,23 @@ class RunBOSS:
         self.dim = len(self.X_names)
         self.data = self.data[self.X_names + self.Y_name]
 
-    def parse_bounds(self, df) -> None:
+    def parse_params(self, df) -> None:
         """
         Return the variable names and bounds to run with BOMain object.
 
         :param df:
             Uploaded file, which is read into a dataframe.
 
-        :return:
-        tp_bounds_array: ndarray
-            Transposed numpy array of the bounds
+        :return: None
         """
         bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
         self.bounds = np.transpose(bounds_array)
         self.dim = self.bounds.shape[0]
+        if "noise variance" in df.columns:
+            self.noise = df["noise variance"][0]
+
+        if "goal" in df.columns:
+            self.min_max = df["goal"][0]
 
     def _display_input_widgets(
             self, d: int, cur_bounds: np.ndarray = None
@@ -136,6 +141,8 @@ class RunBOSS:
 
         :param defaults: None or ndarray
             Default values of lower and upper bounds in input widgets when they first render.
+
+        :return: None
         """
         if not self.bounds_exist:
             self.bounds = np.empty(shape=(self.dim, 2))
@@ -145,25 +152,24 @@ class RunBOSS:
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
 
-    def validate_bounds(self) -> None:
+    def verify_params(self) -> None:
         """
-        For each variable, check if the lower bound is smaller than the upper bound.
+        Verify that the user has entered the necessary parameters for BOSS.
 
         :return: None
         """
-        for d in range(self.dim):
-            if self.bounds[d][0] is None or self.bounds[d][1] is None:
-                st.error("⚠️ Fill in any empty bound.")
-            if not self.bounds[d][0] < self.bounds[d][1]:
-                st.error("⚠️ Lower bound has to be smaller than upper bound.")
+        if self.noise is None:
+            st.error("⚠️ Please enter the noise variance.")
 
     def set_opt_params(self) -> None:
         """
         Set parameters for minimization/maximization choice and noise variance.
+
+        :return: None
         """
         col1, col2 = st.columns(2)
         with col1:
-            self.min_or_max = st.selectbox(
+            self.min_max = st.selectbox(
                 "Minimize or maximize the target value?",
                 options=("Minimize", "Maximize"),
                 disabled=self.has_run,
@@ -172,6 +178,7 @@ class RunBOSS:
             self.noise = st.number_input(
                 "Noise variance",
                 min_value=0.0,
+                value=self.noise,
                 format="%.5f",
                 help="Estimated variance for the Gaussian noise",
                 disabled=self.has_run,
@@ -180,6 +187,8 @@ class RunBOSS:
     def run_boss(self) -> None:
         """
         Run BOSS with the given parameters.
+
+        :return: None
         """
         bo = BOMain(
             f=dummy_func,
@@ -188,7 +197,7 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
-        if self.min_or_max == "Minimize":
+        if self.min_max == "Minimize":
             self.results = bo.run(self.X_vals, self.Y_vals)
         else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
@@ -196,6 +205,8 @@ class RunBOSS:
     def display_result(self) -> None:
         """
         Display the global optimal location and prediction returned by BOSS.
+
+        :return: None
         """
         if self.results is not None:
             x_glmin = self.results.select("x_glmin", -1)  # global min
@@ -207,7 +218,7 @@ class RunBOSS:
             mu_glmin = np.around(mu_glmin, decimals=3)
 
             if self.X_names is not None:
-                if self.min_or_max == "Maximize":
+                if self.min_max == "Maximize":
                     st.success(
                         f"Predicted global maximum: {-mu_glmin} at {self.X_names} = {x_glmin}",
                         icon="✅",
@@ -221,6 +232,8 @@ class RunBOSS:
     def display_next_acq(self) -> None:
         """
         Get and display the next acquisition location suggested by BOSS.
+
+        :return: None
         """
         if self.results is not None:
             X_next = self.results.get_next_acq(-1)
@@ -247,29 +260,47 @@ class RunBOSS:
     def add_bounds(self) -> None:
         """
         Add the bounds to the data table, only used when downloading data.
+
+        :return: None
         """
         var_names = self.X_names + self.Y_name  # store column names for the final df
 
-        # add "output-var " in front of output variable name so the file will be parsed correctly later
+        # Add "output-var " in front of output name so the file will be parsed correctly later
         if not self.bounds_exist:
             var_names[-1] = "output-var " + self.Y_name[0]
-        bounds_arr = np.zeros(shape=(self.data.shape[0], self.dim)) * np.nan
 
+        bounds_arr = np.zeros(shape=(self.data.shape[0], self.dim)) * np.nan
         for d in range(self.dim):
             # filling the bounds array
             bounds_arr[0, d] = self.bounds[d][0]
             bounds_arr[1, d] = self.bounds[d][1]
             if not self.bounds_exist:
                 var_names[d] = "input-var " + self.X_names[d]
-
             bound_name = self.X_names[d].removeprefix("input-var ")
             var_names.append(f"boss-bound {bound_name}")  # store column names for the returned df
 
         data = np.concatenate((self.data, bounds_arr), axis=1)
         self.dload_data = pd.DataFrame(data=data, columns=var_names)
 
+    def add_params(self) -> None:
+        """
+        Add the noise variance and  to the data table, only used when downloading data.
+
+        :return: None
+        """
+        self.dload_data["noise variance"] = None
+        self.dload_data["noise variance"][0] = self.noise
+        self.dload_data["goal"] = None
+        self.dload_data["goal"][0] = self.min_max  # whether to minimize or maximize
+
     def download(self) -> None:
+        """
+        Make a download button for the dataset with bounds and other parameters.
+
+        :return: None
+        """
         self.add_bounds()
+        self.add_params()
         st.download_button(
             label="Download",
             data=self.dload_data.to_csv(index=False).encode("utf-8"),
