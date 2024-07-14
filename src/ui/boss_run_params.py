@@ -54,8 +54,11 @@ def input_X_bounds(
     """
     Display the number input widgets based on the dimension and input variable names.
 
-    :param X_names: Input variable names
-    :param lower_and_upper_bounds: Default value of input widgets when they first render.
+    :param X_names:
+        Input variable names
+    :param lower_and_upper_bounds:
+        Default value of input widgets when they first render.
+
     :return: Lower and upper bounds set by the user.
     """
     dimension = len(X_names)
@@ -74,11 +77,3 @@ def input_X_bounds(
             bounds[d, 1] = upper_bound
     return bounds
 
-
-# TODO
-def set_optional_params():
-    """
-    Set advanced, optional parameters.
-    :return:
-    """
-    pass
