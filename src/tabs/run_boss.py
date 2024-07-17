@@ -18,7 +18,7 @@ class RunBOSS:
             data=None,
             bounds=None,
             X_names=None,
-            noise=None,
+            noise=0.0,
             res=None,
     ):
         self.data = data
@@ -95,9 +95,8 @@ class RunBOSS:
         self.dim = self.bounds.shape[0]
         if "noise variance" in df.columns:
             self.noise = df["noise variance"][0]
-
         if "goal" in df.columns:
-            self.min_max = df["goal"][0]
+            self.min_max = df["goal"][0].lower()
 
     def _display_input_widgets(
             self, d: int, cur_bounds: np.ndarray = None
@@ -152,15 +151,6 @@ class RunBOSS:
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
 
-    def verify_params(self) -> None:
-        """
-        Verify that the user has entered the necessary parameters for BOSS.
-
-        :return: None
-        """
-        if self.noise is None:
-            st.error("⚠️ Please enter the noise variance.")
-
     def set_opt_params(self) -> None:
         """
         Set parameters for minimization/maximization choice and noise variance.
@@ -173,6 +163,7 @@ class RunBOSS:
                 "Minimize or maximize the target value?",
                 options=("Minimize", "Maximize"),
                 disabled=self.has_run,
+                index=0 if self.min_max.lower() == "minimize" else 1,
             )
         with col2:
             self.noise = st.number_input(
@@ -183,6 +174,25 @@ class RunBOSS:
                 help="Estimated variance for the Gaussian noise",
                 disabled=self.has_run,
             )
+
+    @staticmethod
+    def verify_bounds(bounds) -> bool:
+        """
+        For each variable, check if the lower bound is smaller than the upper bound.
+
+        :return: bool
+        """
+        if bounds is None:
+            st.error("⚠️ Please choose bounds for all variables.")
+            return False
+        else:
+            if np.isnan(bounds).any():
+                st.error("⚠️ Please set bounds for all variables.")
+            if not np.all(bounds[:, 0] < bounds[:, 1]):
+                st.error("⚠️ Lower bound has to be smaller than upper bound.")
+                return False
+            if not np.isnan(bounds).any() and np.all(bounds[:, 0] < bounds[:, 1]):
+                return True
 
     def run_boss(self) -> None:
         """
@@ -199,8 +209,10 @@ class RunBOSS:
         )
         if self.min_max == "Minimize":
             self.results = bo.run(self.X_vals, self.Y_vals)
+            self.has_run = True
         else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
+            self.has_run = True
 
     def display_result(self) -> None:
         """
