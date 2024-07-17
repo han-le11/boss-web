@@ -68,3 +68,10 @@ st.subheader("✅ Post-processing")
 st.markdown("After getting BOSS optimization results, you can get some model plots and acquisition function plot. ")
 st.markdown(f"Go to page [Run]({run_url}), then go to tab Post-processing and run post-processing. "
             f"The plots will appear here and you can save them.")
+
+st.subheader("✅ Bug report")
+st.markdown("As the BOSS web app is under development, if you run into a bug, please report it. We appreciate all "
+            "feedback, thank you! Please contact us via Slack or email: ")
+st.markdown("Han Le: han.le@aalto.fi")
+st.markdown("Joakim Löfgren: joakim.lofgren@aalto.fi")
+st.markdown("Matthias Stosiek: matthias.stosiek@aalto.fi or matthias.stosiek@tum.de")
