@@ -38,19 +38,6 @@ class RunHelper:
                     + " Please check the file contents and re-upload."
                 )
 
-    @staticmethod
-    def verify_bounds(dim, bounds) -> None:
-        """
-        For each variable, check if the lower bound is smaller than the upper bound.
-
-        :return: None
-        """
-        for d in range(dim):
-            if bounds[d][0] is None or bounds[d][1] is None:
-                st.error("⚠️ Fill in any empty bound.")
-            if not bounds[d][0] < bounds[d][1]:
-                st.error("⚠️ Lower bound has to be smaller than upper bound.")
-
     @st.experimental_dialog("Are you sure you want to clear the data?")
     def clear_data(self) -> None:
         """
