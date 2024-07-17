@@ -1,9 +1,13 @@
 import numpy as np
+import pandas as pd
 import unittest
 from src.tabs.run_boss import RunBOSS
 
 
-class TestAddBounds(unittest.TestCase):
+class TestParams(unittest.TestCase):
+    """
+    Test parse_params function and add_bounds function of class RunBOSS.
+    """
 
     def setUp(self):
         self.obj = RunBOSS()  # Instantiate your class here
@@ -13,6 +17,23 @@ class TestAddBounds(unittest.TestCase):
         self.obj.bounds_exist = False
         self.obj.dim = 2
         self.obj.bounds = [(0, 1), (0, 1)]
+        self.test_df = pd.DataFrame({
+            'boss-bound-x': [1, 2, 3],
+            'boss-bound-y': [4, 5, 6],
+            'noise variance': [0.1, None, None],
+            'goal': ['maximize', None, None]
+        })
+
+    def test_find_bounds(self):
+        self.obj.parse_params(self.test_df)
+        self.assertEqual(self.obj.bounds.tolist(), [[1, 2, 3], [4, 5, 6]])
+        self.assertEqual(self.obj.bounds.shape, (2, 3))
+        self.assertEqual(self.obj.dim, 2)
+        self.assertEqual(self.obj.noise, 0.1)
+
+    def test_set_opt_params(self):
+        self.obj.parse_params(self.test_df)
+        self.assertEqual(self.obj.min_max, 'maximize')
 
     def test_shape_file_without_bounds(self):
         self.obj.add_bounds()
@@ -33,4 +54,3 @@ class TestAddBounds(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
