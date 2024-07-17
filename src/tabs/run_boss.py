@@ -95,6 +95,8 @@ class RunBOSS:
         self.dim = self.bounds.shape[0]
         if "noise variance" in df.columns:
             self.noise = df["noise variance"][0]
+        if "noise" in df.columns:
+            self.noise = df["noise"][0]
         if "goal" in df.columns:
             self.min_max = df["goal"][0].lower()
 
@@ -187,7 +189,7 @@ class RunBOSS:
             return False
         else:
             if np.isnan(bounds).any():
-                st.error("⚠️ Please set bounds for all variables.")
+                st.error("⚠️ Please set valid bounds for all variables.")
             if not np.all(bounds[:, 0] < bounds[:, 1]):
                 st.error("⚠️ Lower bound has to be smaller than upper bound.")
                 return False
@@ -207,10 +209,10 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
-        if self.min_max == "Minimize":
+        if self.min_max.lower() == "minimize":
             self.results = bo.run(self.X_vals, self.Y_vals)
             self.has_run = True
-        else:
+        elif self.min_max.lower() == "maximize":
             self.results = bo.run(self.X_vals, -self.Y_vals)
             self.has_run = True
 
