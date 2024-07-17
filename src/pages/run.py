@@ -28,6 +28,7 @@ if st.session_state["bo_run"] is None:
 bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
 
+st.warning("⚠️ Please download your data before leaving. ")
 if st.button("Clear all"):
     run_help.clear_data()
 
@@ -117,8 +118,8 @@ with run_tab:
                     # call rerun to redraw everything so next acq is visible in data_editor
                     st.rerun()
                 except TypeError:
-                    st.error("Fill in the empty cells or download data "
-                             "if you want to continue later.")
+                    st.error("Please make sure that all data points are of valid format. "
+                             "Fill in the empty cells or download the data if you want to continue later.")
 
 with postprocess_tab:
     if bo_run.results is not None:

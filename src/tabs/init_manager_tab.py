@@ -70,9 +70,9 @@ class InitManagerTab:
             "#### If you don't have any data, create initial data points here."
         )
         st.markdown(
-            "You can take these initial data point values and, for example, run experiments with them and record "
-            "values of the target variable. "
-            "Then, you can optimize with this data in tab Run BOSS."
+            "Please set the parameters below. Type in variable names and bounds. "
+            "Then, click on Create initial data. "
+            "The initial data points will be shown in a table."
         )
         left, centre, right = st.columns(3, gap="large")
         with left:
