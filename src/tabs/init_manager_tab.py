@@ -18,7 +18,7 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
         A dictionary of variable names (keys) and corresponding bounds (values).
     """
     bounds = np.ones(shape=(dimension, 2)) * np.nan
-    st.session_state["init_names_and_bounds"] = dict()
+    st.session_state["init_vars"] = dict()
     for d in range(dimension):
         col1, col2, col3 = st.columns(3, gap="large")
         with col1:
@@ -34,18 +34,18 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
                 with col2:
                     bounds[d, 0] = st.number_input(
                         f"Lower bound of {var_name} *",
-                        format="%.4f",
+                        format="%.3f",
                         key=f"lower {d}",
                         value=None,
                     )
                 with col3:
                     bounds[d, 1] = st.number_input(
                         f"Upper bound of {var_name} *",
-                        format="%.4f",
+                        format="%.3f",
                         key=f"upper {d}",
                         value=None,
                     )
-                st.session_state["init_names_and_bounds"].update({var_name: bounds[d, :]})
+                st.session_state["init_vars"].update({var_name: bounds[d, :]})
 
     # Make one widget to input target variable name
     col1, col2, col3 = st.columns(3, gap="large")
@@ -57,7 +57,7 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
             key=f"target_{st.session_state.input_key}",
         )
         y_name = "output-var " + y_name
-    st.session_state["init_names_and_bounds"][y_name] = None  # for target values, bounds are assigned None
+    st.session_state["init_vars"][y_name] = None  # for target values, bounds are assigned None
     return bounds
 
 
@@ -67,7 +67,7 @@ class InitManagerTab:
 
     def set_page(self):
         st.markdown(
-            "#### If you have not had any data, create initial data points here."
+            "#### If you don't have any data, create initial data points here."
         )
         st.markdown(
             "You can take these initial data point values and, for example, run experiments with them and record "
@@ -98,8 +98,7 @@ class InitManagerTab:
             )
         return init_type, initpts
 
-    @staticmethod
-    def set_init_manager(init_type: str, initpts: int, bounds) -> InitManager:
+    def set_init_manager(self, init_type: str, initpts: int, bounds) -> InitManager:
         """
         Return an InitManager instance of the InitManager class (from BOSS library).
 
@@ -114,9 +113,15 @@ class InitManagerTab:
         InitManager
         An instance of the InitManager class
         """
-        return InitManager(inittype=init_type,
-                           initpts=initpts,
-                           bounds=bounds,)
+        if bounds is not None:
+            if len(list(st.session_state["init_vars"].keys())) != self.dim + 1:
+                st.error("⚠️ Please give a distinct name for each variable.")
+            if np.isnan(bounds).any():
+                st.error("⚠️ Please set bounds for all variables.")
+            else:
+                return InitManager(inittype=init_type,
+                                   initpts=initpts,
+                                   bounds=bounds,)
 
     @staticmethod
     def download_init_points(arr) -> None:
@@ -130,8 +135,7 @@ class InitManagerTab:
             mime="text/csv",
         )
 
-    @staticmethod
-    def add_var_names(init_arr, names_and_bounds) -> pd.DataFrame:
+    def add_var_names(self, init_arr, names_and_bounds) -> pd.DataFrame:
         """
         Return a dataframe with tabulated variable names and corresponding bounds.
 
@@ -143,12 +147,15 @@ class InitManagerTab:
         :return df: pd.DataFrame
             A dataframe containing initial points and an empty column for recording the target variable.
         """
-        var_names = list(names_and_bounds.keys())
-        empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
-        # concatenate an empty column to record the target values
-        xy_data = np.concatenate((init_arr, empty_y_vals_col), axis=1)
-        df = pd.DataFrame(data=xy_data, columns=var_names)
-        return df
+        if len(list(st.session_state["init_vars"].keys())) != self.dim + 1:
+            st.error("⚠️ Please give a distinct name for each variable.")
+        else:
+            var_names = list(names_and_bounds.keys())
+            empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
+            # concatenate an empty column to record the target values
+            xy_data = np.concatenate((init_arr, empty_y_vals_col), axis=1)
+            df = pd.DataFrame(data=xy_data, columns=var_names)
+            return df
 
     @staticmethod
     def add_bounds_to_dataframe(df, names_and_bounds) -> pd.DataFrame:
