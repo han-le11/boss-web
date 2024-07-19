@@ -21,7 +21,7 @@ class RunHelper:
         Display the "help" tip when hovering the mouse over the question mark icon.
         """
         self.file = st.file_uploader(
-            label="Restart by uploading a csv file",
+            label="The CSV file must use colons or semicolons as separators",
             type=["csv"],
             help="Your file should contain data for input variables and target variable",
             key=f"uploader_{st.session_state.input_key}"
