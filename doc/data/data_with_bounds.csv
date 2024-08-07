@@ -1,0 +1,6 @@
+input-var x,input-var y,input-var z,output-var z,boss-bound x,boss-bound y,boss-bound z,noise variance,goal
+-2.0,-10.0,-6.0,1.0,-2.0,-10.0,-6.0,0.2,Minimize
+2.5,2.5,-2.0,2.0,7.0,15.0,2.0,,
+4.75,-3.75,-4.0,3.0,,,,,
+0.25,8.75,0.0,5.0,,,,,
+1.375,-0.625,-1.0,7.0,,,,,
