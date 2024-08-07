@@ -128,6 +128,8 @@ class InitManagerTab:
         if not isinstance(arr, pd.DataFrame):
             arr = pd.DataFrame(arr)
         data = arr.to_csv(index=False).encode("utf-8")
+        st.warning("⚠️ If you don't record the values of the target variable now, please download this dataset and "
+                   "record them later.")
         st.download_button(
             label="Download",
             file_name="boss_init.csv",

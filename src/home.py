@@ -7,10 +7,10 @@ page_config = PageConfig(
     header="Home",
     icon="🏠",
 )
-
 page_config.set_page()
+header_img = "doc/img/boss_main_page.png"
+st.image(header_img)
 customize_footer()
-
 boss_url = "https://sites.utu.fi/boss/"
 
 st.markdown(
@@ -22,10 +22,8 @@ st.markdown(f"Visit the [BOSS website]({boss_url}) for more information about fe
             f"cases.")
 
 st.title("Contact")
-
-st.markdown("If you have any problems, questions, or suggestions for the BOSS web app, please contact us via Slack or "
-            "email: \n")
-
+st.markdown("If you have any problems, questions, bug reports, or suggestions for the BOSS web app, please contact us "
+            "via Slack or email: \n")
 st.markdown("Han Le: han.le@aalto.fi")
 st.markdown("Joakim Löfgren: joakim.lofgren@aalto.fi")
 st.markdown("Matthias Stosiek: matthias.stosiek@aalto.fi or matthias.stosiek@tum.de")
