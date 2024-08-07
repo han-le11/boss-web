@@ -73,7 +73,7 @@ class RunBOSS:
             )
         with out_col:
             self.Y_name = st.multiselect(
-                "Choose one target variable *",
+                "Choose one output variable *",
                 options=list(self.data.columns),
                 default=None,
                 max_selections=1,
@@ -225,21 +225,23 @@ class RunBOSS:
         if self.results is not None:
             x_glmin = self.results.select("x_glmin", -1)  # global min
             x_glmin = np.around(x_glmin, decimals=3)
-            x_glmin = x_glmin.tolist()
 
             # global min prediction from the last iteration
             mu_glmin = self.results.select("mu_glmin", -1)
             mu_glmin = np.around(mu_glmin, decimals=3)
-
+            glmin = {}
+            for key, val in zip(self.X_names, x_glmin):
+                glmin[key] = val
+            res = ", ".join(str(key) + " = " + str(val) for key, val in glmin.items())
             if self.X_names is not None:
                 if self.min_max == "Maximize":
                     st.success(
-                        f"Predicted global maximum: {-mu_glmin} at {self.X_names} = {x_glmin}",
+                        f"Predicted global maximum: {self.Y_name[0]} = {-mu_glmin} at \n {res}.",
                         icon="✅",
                     )
                 else:
                     st.success(
-                        f"Predicted global minimum: {mu_glmin} at {self.X_names} = {x_glmin}",
+                        f"Predicted global minimum: {self.Y_name[0]} = {mu_glmin} at \n {res}.",
                         icon="✅",
                     )
 
@@ -250,15 +252,15 @@ class RunBOSS:
         :return: None
         """
         if self.results is not None:
-            X_next = self.results.get_next_acq(-1)
-            X_next = np.around(X_next, decimals=4)
-            if self.X_names:
-                pairs = dict(zip(self.X_names, X_next))
-                for key, value in pairs.items():
-                    st.success(
-                        f"Next acquisition: \n" f"{key} at {value}",
-                        icon="🔍",
-                    )
+            X_next = np.transpose(np.around(self.results.get_next_acq(-1), decimals=4))
+            next_acq = {}
+            for key, val in zip(self.X_names, X_next):
+                next_acq[key] = val
+            res = ", ".join(str(key) + " = " + str(val[0]) for key, val in next_acq.items())
+            st.success(
+                f"Next acquisition:  \n {res}",
+                icon="✅",
+            )
 
     def concat_next_acq(self) -> None:
         """
