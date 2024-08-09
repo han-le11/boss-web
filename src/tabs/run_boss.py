@@ -196,6 +196,13 @@ class RunBOSS:
             if not np.isnan(bounds).any() and np.all(bounds[:, 0] < bounds[:, 1]):
                 return True
 
+    def verify_data(self):
+        if self.data.isnull().values.any():
+            st.error("⚠️ Please fill in the empty cells or download the data if you want to continue later.")
+            return False
+        else:
+            return True
+
     def run_boss(self) -> None:
         """
         Run BOSS with the given parameters.
