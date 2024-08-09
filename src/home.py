@@ -17,9 +17,9 @@ st.markdown(
     "Bayesian Optimization Structure Search (BOSS) is a general-purpose Bayesian Optimization tool that can facilitate "
     "machine learning in computational and experimental natural sciences.\n"
 )
-st.markdown(f"You are on the BOSS web app, which is a spin-off of the Python library [BOSS]({boss_url}).")
-st.markdown(f"Visit the [BOSS website]({boss_url}) for more information about features of the library and research use "
-            f"cases.")
+st.markdown(f"You are on the BOSS web app, which is a spin-off of the Python code [BOSS]({boss_url}).")
+st.markdown(f"Visit the [BOSS website]({boss_url}) for more information about features of the BOSS code and research "
+            f"use cases.")
 
 st.title("Contact")
 st.markdown("If you have any problems, questions, bug reports, or suggestions for the BOSS web app, please contact us "
