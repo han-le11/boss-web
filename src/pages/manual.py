@@ -71,10 +71,14 @@ st.write(
     "recognize and parse the relevant data and metadata. "
 )
 st.markdown(
-    """- Column names for the input variables have the text “input-var” in their names. For example, “input-var " "x” 
-    and “input-var y”, etc. - Column name for the output variable has “output-var” and the column names for bounds 
-    have “boss-bound”. - The noise variance and a flag determining minimization or maximization are in separate 
-    columns in the CSV file (like in the example below)"""
+    """
+    - Column names for the input variables have the text “input-var” in their names. For example, “input-var " "x” 
+    and “input-var y”, etc. 
+    - Column name for the output variable has “output-var” and the column names for bounds 
+    have “boss-bound”. 
+    - The noise variance and a flag determining minimization or maximization are in separate 
+    columns in the CSV file (like in the example below)
+    """
 )
 
 st.write(
@@ -96,7 +100,7 @@ st.write(
     "been transferred automatically from the “Create initial data” tab to the “Run BOSS” tab.")
 st.image("doc/screenshots/init/case 1.2 run.png", width=650)
 st.write("You can continue with the BO cycle, as in step 1.1., after typing in the target values (under the "
-         "“output-var” column ). If you want to continue at a later time, please do not forget to download the CSV "
+         "“output-var” column). If you want to continue at a later time, please do not forget to download the CSV "
          "file (via the Download button) with which you can restart the BO cycle.")
 
 st.subheader("Step 3, 4.1, and 4.2. Run BOSS and record the output value of the new acquisition")
