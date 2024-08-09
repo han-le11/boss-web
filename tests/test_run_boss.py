@@ -10,7 +10,7 @@ class TestParams(unittest.TestCase):
     """
 
     def setUp(self):
-        self.obj = RunBOSS()  # Instantiate your class here
+        self.obj = RunBOSS()
         self.obj.X_names = ["X1", "X2"]
         self.obj.Y_name = ["Y"]
         self.obj.data = np.array([[1, 2, 3], [3, 4, 6], [5, 7, 9], [2, 8, 6]])
@@ -37,9 +37,8 @@ class TestParams(unittest.TestCase):
 
     def test_shape_file_without_bounds(self):
         self.obj.add_bounds()
-        print(self.obj.dload_data.shape)
-        self.assertEqual(self.obj.dload_data.shape,
-                         (self.obj.data.shape[0], self.obj.dim + 3))  # 3 original columns + 2 columns for bounds
+        # 3 original columns + 2 columns for bounds
+        self.assertEqual(self.obj.dload_data.shape,(self.obj.data.shape[0], self.obj.dim + 3))
 
     def test_col_names_file_without_bounds(self):
         """
@@ -50,6 +49,34 @@ class TestParams(unittest.TestCase):
         self.assertIn("boss-bound X1", self.obj.dload_data.columns)
         self.assertIn("boss-bound X2", self.obj.dload_data.columns)
         self.assertIn("output-var Y", self.obj.dload_data.columns)
+
+    def test_bounds_none(self):
+        bounds = None
+        self.assertFalse(self.obj.verify_bounds(bounds))
+
+    def test_bounds_with_nan_values(self):
+        bounds = np.array([[1, 2], [np.nan, 4]])
+        self.assertFalse(self.obj.verify_bounds(bounds))
+
+    def test_lower_bound_not_smaller_than_upper_bound(self):
+        bounds = np.array([[2, 1], [3, 4]])
+        self.assertFalse(self.obj.verify_bounds(bounds))
+
+    def test_valid_bounds(self):
+        bounds = np.array([[1, 2], [3, 4]])
+        self.assertTrue(self.obj.verify_bounds(bounds))
+
+
+class TestDataVerification(unittest.TestCase):
+    def test_null_values(self):
+        data_with_null = pd.DataFrame({'A': [1, 2, None, 4]})
+        obj = RunBOSS(data=data_with_null)
+        self.assertFalse(obj.verify_data())
+
+    def test_no_null_values(self):
+        data_no_null = pd.DataFrame({'A': [1, 2, 3, 4]})
+        obj = RunBOSS(data=data_no_null)
+        self.assertTrue(obj.verify_data())
 
 
 if __name__ == '__main__':

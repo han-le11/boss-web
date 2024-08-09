@@ -111,7 +111,7 @@ with run_tab:
     # regardless of whether BO has been run we want to display the run button
     if bo_run.data is not None:
         if st.button("Run BOSS", type="primary"):
-            if bo_run.verify_bounds(bo_run.bounds):
+            if bo_run.verify_bounds(bo_run.bounds) and bo_run.verify_data():
                 try:
                     bo_run.run_boss()
                     bo_run.concat_next_acq()
