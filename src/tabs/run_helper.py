@@ -38,7 +38,7 @@ class RunHelper:
                     + " Please check the file contents and re-upload."
                 )
 
-    @st.experimental_dialog("Are you sure you want to clear all data?")
+    @st.dialog("Are you sure you want to clear all data?")
     def clear_data(self) -> None:
         """
         Clear all input data and BOSS optimization results.
