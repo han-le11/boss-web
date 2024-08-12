@@ -42,14 +42,14 @@ st.write(
     "graph. \n"
 )
 st.image("doc/img/workflow.png", width=650)
-st.write("Annotations for the steps in the flow chart above: ")
 
 st.subheader("Step 1.1. Upload a pre-defined CSV file in the " "Run BOSS" " tab")
 st.write(
     ":green[**1. If the CSV file does not contain metadata (i.e., bounds and other parameters for BOSS run):**]  "
     "\n \n"
-    "In this case, the CSV file should be in proper tabular format. You can try out the BOSS web app using the "
-    "experimental data of lignin valorization as a toy dataset, which can be downloaded from here.  \n\n"
+    f"In this case, the CSV file should be in proper tabular format. You can try out the BOSS web app using the "
+    f"experimental data of lignin valorization as a toy dataset, which can be downloaded from [here]({lignin_url}).  "
+    f"\n\n"
     f"On page [Run]({run_url}), navigate to the tab “Run BOSS” and upload a CSV file there. Choose input and "
     f"output variables and set valid bounds for input variables. Choose to minimize or maximize the output value "
     f"(BOSS runs minimization by default) and set the noise variance. Then, click on Run BOSS. "
