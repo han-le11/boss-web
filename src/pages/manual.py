@@ -43,9 +43,9 @@ st.write(
 )
 st.image("doc/img/workflow.png", width=650)
 
-st.subheader("Step 1.1. Upload a pre-defined CSV file in the " "Run BOSS" " tab")
+st.subheader(":green[Step 1.1. Upload a pre-defined CSV file in the Run BOSS tab]")
 st.write(
-    ":green[**1. If the CSV file does not contain metadata (i.e., bounds and other parameters for BOSS run):**]  "
+    "**1. If the CSV file does not contain metadata (i.e., bounds and other parameters for BOSS run):**"
     "\n \n"
     f"In this case, the CSV file should be in proper tabular format. You can try out the BOSS web app using the "
     f"experimental data of lignin valorization as a toy dataset, which can be downloaded from [here]({lignin_url}).  "
@@ -57,7 +57,7 @@ st.write(
 st.image("doc/screenshots/run/case 1.1.1.png", width=650)
 
 st.write(
-    ":green[**2. If you use a csv file containing bounds and other parameters for BOSS run:**]  "
+    "**2. If you use a csv file containing bounds and other parameters for BOSS run:**"
     "\n\n We use an internal file format to store metadata, e.g., the bounds and the noise variance, together with"
     "the data for successive BOSS iterations.  \n\n"
     "Please note that as a user, you do not have to create such a file "
@@ -72,7 +72,7 @@ st.write(
 )
 st.markdown(
     """
-    - Column names for the input variables have the text “input-var” in their names. For example, “input-var " "x” 
+    - Column names for the input variables have the text “input-var” in their names. For example, “input-var x” 
     and “input-var y”, etc. 
     - Column name for the output variable has “output-var” and the column names for bounds 
     have “boss-bound”. 
@@ -88,7 +88,7 @@ st.write(
     "information."
 )
 
-st.subheader("Step 1.2 and Step 2. If you have no initial data:")
+st.subheader(":green[Step 1.2 and Step 2. If you have no initial data:]")
 st.write(
     f"If you want to start the data acquisition process without any pre-existing data, go to the page [Run]({run_url}), "
     f"then go to the “Create initial data” tab. Set all the required parameters and type in variable names and "
@@ -103,7 +103,7 @@ st.write("You can continue with the BO cycle, as in step 1.1., after typing in t
          "“output-var” column). If you want to continue at a later time, please do not forget to download the CSV "
          "file (via the Download button) with which you can restart the BO cycle.")
 
-st.subheader("Step 3, 4.1, and 4.2. Run BOSS and record the output value of the new acquisition")
+st.subheader(":green[Step 3, 4.1, and 4.2. Run BOSS and record the output value of the new acquisition]")
 st.write("When clicking the red “Run BOSS” button (i.e., running one BOSS iteration), you will see the new "
          "acquisition point, as suggested by BOSS. This acquisition will also be automatically appended to your "
          "original dataset.  \n\n"
