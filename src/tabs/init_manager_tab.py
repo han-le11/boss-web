@@ -4,12 +4,12 @@ import streamlit as st
 from boss.bo.initmanager import InitManager
 
 
-def set_input_var_bounds(dimension: int) -> (np.array, dict):
+def set_names_bounds(dimension: int) -> (np.array, dict):
     """
     Return an array of input bounds and a dictionary of variable names and corresponding bounds.
 
     :param dimension: int
-        dimension of the input values
+        dimension of the search space of input variables.
 
     :return:
     bounds: ndarray
@@ -45,25 +45,27 @@ def set_input_var_bounds(dimension: int) -> (np.array, dict):
                         key=f"upper {d}",
                         value=None,
                     )
-                st.session_state["init_vars"].update({var_name: bounds[d, :]})
+            st.session_state["init_vars"][var_name] = bounds[d, :]
 
     # Make one widget to input target variable name
     col1, col2, col3 = st.columns(3, gap="large")
     with col1:
         y_name = st.text_input(
-            f"Write the name of the target variable",
+            f"Write the name of the output variable",
             max_chars=50,
             help="A descriptive name will be great!",
             key=f"target_{st.session_state.input_key}",
         )
         y_name = "output-var " + y_name
     st.session_state["init_vars"][y_name] = None  # for target values, bounds are assigned None
+    st.write(st.session_state["init_vars"])
     return bounds
 
 
 class InitManagerTab:
     def __init__(self):
         self.dim = None
+        self.min_max = True
 
     def set_page(self):
         st.markdown(
@@ -137,27 +139,29 @@ class InitManagerTab:
             mime="text/csv",
         )
 
-    def add_var_names(self, init_arr, names_and_bounds) -> pd.DataFrame:
+    @staticmethod
+    def add_var_names(init_arr, names_and_bounds) -> pd.DataFrame:
         """
         Return a dataframe with tabulated variable names and corresponding bounds.
 
         :param init_arr: ndarray
-            An array of initial points.
+            An array of initial points for the input space.
         :param names_and_bounds: dict
             A dictionary of variable names (key) and bounds (value).
 
         :return df: pd.DataFrame
             A dataframe containing initial points and an empty column for recording the target variable.
         """
-        if len(list(st.session_state["init_vars"].keys())) != self.dim + 1:
-            st.error("⚠️ Please give a distinct name for each variable.")
-        else:
+        # if len(list(st.session_state["init_vars"].keys())) == self.dim + 1:
+        try:
             var_names = list(names_and_bounds.keys())
             empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
             # concatenate an empty column to record the target values
             xy_data = np.concatenate((init_arr, empty_y_vals_col), axis=1)
             df = pd.DataFrame(data=xy_data, columns=var_names)
             return df
+        except ValueError:
+            raise ValueError("⚠️ Please give a distinct name for each variable.")
 
     @staticmethod
     def add_bounds_to_dataframe(df, names_and_bounds) -> pd.DataFrame:
