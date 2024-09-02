@@ -1,7 +1,7 @@
 import numpy as np
 import streamlit as st
 from boss.pp.pp_main import PPMain
-from tabs.init_manager_tab import InitManagerTab, set_input_var_bounds
+from tabs.init_manager_tab import InitManagerTab, set_names_bounds
 from tabs.postprocessing_tab import PostprocessingTab
 from tabs.run_boss import RunBOSS
 from tabs.run_helper import RunHelper
@@ -28,7 +28,7 @@ if st.session_state["bo_run"] is None:
 bo_run: RunBOSS = st.session_state["bo_run"]
 run_help: RunHelper = RunHelper()
 
-st.warning("⚠️ Please download your data before leaving. ")
+st.warning("⚠️ Please download your data before leaving.")
 if st.button("Clear all"):
     run_help.clear_data()
 
@@ -39,7 +39,7 @@ init_data_tab, run_tab, postprocess_tab = st.tabs(
 with init_data_tab:
     init = InitManagerTab()
     init_type, initpts = init.set_page()
-    init_bounds = set_input_var_bounds(init.dim)
+    init_bounds = set_names_bounds(init.dim)
 
     if st.button("Generate points"):
         if bo_run.verify_bounds(init_bounds):
