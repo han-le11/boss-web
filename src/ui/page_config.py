@@ -1,4 +1,5 @@
 import streamlit as st
+import sys
 
 
 def customize_footer() -> None:
@@ -61,6 +62,7 @@ class PageConfig:
         Set the page layout.
         Temporarily customize the max width with css.
         """
+        sys.tracebacklimit = 0
         st.set_page_config(
             page_title=self.tab_title,
             page_icon=self.icon,
@@ -83,7 +85,7 @@ class PageConfig:
         if "bo_run" not in st.session_state:
             st.session_state["bo_run"] = None
 
-        # dictionary of init variable names (key) and bounds (value)
+        # dictionary of variable names (key) and bounds (value)
         if "init_vars" not in st.session_state:
             st.session_state["init_vars"] = None
 

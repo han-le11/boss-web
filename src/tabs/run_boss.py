@@ -307,7 +307,7 @@ class RunBOSS:
 
     def add_params(self) -> None:
         """
-        Add the noise variance and  to the data table, only used when downloading data.
+        Add the noise variance and to the dataframe. This function is only used for downloaded data.
 
         :return: None
         """
