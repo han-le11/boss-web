@@ -58,7 +58,6 @@ def set_names_bounds(dimension: int) -> (np.array, dict):
         )
         y_name = "output-var " + y_name
     st.session_state["init_vars"][y_name] = None  # for target values, bounds are assigned None
-    st.write(st.session_state["init_vars"])
     return bounds
 
 
