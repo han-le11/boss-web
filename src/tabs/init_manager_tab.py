@@ -65,7 +65,7 @@ def set_names_bounds(dimension: int) -> (np.array, dict):
 class InitManagerTab:
     def __init__(self):
         self.dim = None
-        self.min_max = True
+        self.min = True
 
     def set_page(self):
         st.markdown(
