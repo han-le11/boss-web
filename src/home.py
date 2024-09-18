@@ -8,6 +8,7 @@ page_config = PageConfig(
     icon="🏠",
 )
 page_config.set_page()
+st.info("Start using the web app by choosing ‘run’ from the left side bar.")
 header_img = "doc/img/boss_main_page.png"
 st.image(header_img)
 customize_footer()

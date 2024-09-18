@@ -3,8 +3,8 @@ import streamlit as st
 from ui.page_config import PageConfig, customize_footer
 
 page_config = PageConfig(
-    main_title="Tutorial",
-    tab_title="Tutorial",
+    main_title="Manual",
+    tab_title="Manual",
     header="Tutorial",
     icon=None,
 )

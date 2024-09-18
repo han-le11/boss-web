@@ -62,7 +62,6 @@ class PageConfig:
         Set the page layout.
         Temporarily customize the max width with css.
         """
-        sys.tracebacklimit = 0
         st.set_page_config(
             page_title=self.tab_title,
             page_icon=self.icon,
