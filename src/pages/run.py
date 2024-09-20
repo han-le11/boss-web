@@ -40,6 +40,7 @@ with init_data_tab:
     init = InitManagerTab()
     init_type, initpts = init.set_page()
     init_bounds = set_names_bounds(init.dim)
+    # bo_run.min, bo_run.noise = init.set_opt_params()
 
     if st.button("Generate points"):
         if bo_run.verify_bounds(init_bounds):
@@ -70,6 +71,7 @@ with init_data_tab:
         init.download_init_points(bo_run.data)
 
 with run_tab:
+    st.write("#### Run BOSS iterations here.")
     if not bo_run.has_run:
         # Use init points if they exist. Otherwise, use uploaded file.
         if st.session_state["init_pts"] is None:
@@ -110,7 +112,7 @@ with run_tab:
 
     # regardless of whether BO has been run we want to display the run button
     if bo_run.data is not None:
-        if st.button("Run BOSS", type="primary"):
+        if st.button("Run BO iteration", type="primary"):
             if bo_run.verify_bounds(bo_run.bounds) and bo_run.verify_data():
                 try:
                     bo_run.run_boss()
@@ -122,13 +124,13 @@ with run_tab:
                              "Fill in the empty cells or download the data if you want to continue later.")
 
 with postprocess_tab:
+    st.write("#### Plot the results of the optimization.")
     if bo_run.results is not None:
         bo_run.display_result()
         pp = PostprocessingTab(bo_run.results, bo_run.X_names)
         col1, col2 = st.columns(2)
-        with col1:
-            pp_iters = pp.input_pp_iters()
-
+        # with col1:
+        #     pp_iters = pp.input_pp_iters()
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
         if st.button("Run post-processing"):
             post = PPMain(
@@ -142,5 +144,5 @@ with postprocess_tab:
             pp.display_acqfns()
     else:
         st.warning(
-            "⚠️ No optimization results available. Please optimize first in the tab Run BOSS."
+            "⚠️ No optimization results available. Please run BOSS in the tab Run BOSS."
         )
