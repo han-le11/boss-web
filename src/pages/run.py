@@ -6,7 +6,7 @@ from tabs.postprocessing_tab import PostprocessingTab
 from tabs.run_boss import RunBOSS
 from tabs.run_helper import RunHelper
 from ui.file_handler import find_bounds
-from ui.page_config import PageConfig, customize_footer, remove_toggles
+from ui.page_config import PageConfig, customize_footer
 
 # Set page layout and settings
 config = PageConfig(
@@ -18,7 +18,6 @@ config = PageConfig(
 config.set_page()
 config.init_states()
 customize_footer()
-remove_toggles()
 
 # Initialize a session state for RunBOSS if there isn't one
 if st.session_state["bo_run"] is None:
@@ -32,84 +31,123 @@ st.warning("⚠️ Please download your data before leaving.")
 if st.button("Clear all"):
     run_help.clear_data()
 
-init_data_tab, run_tab, postprocess_tab = st.tabs(
-    ["Create initial data", "Run BOSS", "Post-processing"]
+setup_tab, run_tab, postprocess_tab = st.tabs(
+    ["Set up BOSS", "Run BOSS", "Post-processing"]
 )
 
-with init_data_tab:
-    init = InitManagerTab()
-    init_type, initpts = init.set_page()
-    init_bounds = set_names_bounds(init.dim)
-    # bo_run.min, bo_run.noise = init.set_opt_params()
 
-    if st.button("Generate points"):
-        if bo_run.verify_bounds(init_bounds):
-            init_manager = init.set_init_manager(
-                init_type,
-                initpts,
-                init_bounds,
-            )
-            init_pts = init_manager.get_all()
-            # concatenate an empty column for target values to df and save to session state
-            st.session_state["init_pts"] = init.add_var_names(
-                init_pts, st.session_state["init_vars"]
-            )
-
-    # Display an editable df for initial points
-    if (
-            st.session_state["init_pts"] is not None
-            and len(st.session_state["init_pts"].columns) == init.dim + 1
-            and not np.isnan(init_bounds).any()
-            and "" not in list(st.session_state["init_vars"].keys())
-            and not bo_run.has_run
-    ):
-        bo_run.data = st.data_editor(st.session_state["init_pts"])
-        # df with bounds, only seen when downloaded, not shown in UI
-        bo_run.data = init.add_bounds_to_dataframe(
-            bo_run.data, st.session_state["init_vars"]
+with setup_tab:
+    st.write("#### Set up input data and parameters for BOSS here.")
+    col1, col2 = st.columns(2)
+    with col1:
+        choice = st.selectbox(
+            "Do you want to upload a tabular data file, or create some initial data points?",
+            options=("Upload file", "Create data points"),
+            help="If you don't have any data, select 'Create data points'. Otherwise, select ''Upload file'.",
+            index=None,
         )
-        init.download_init_points(bo_run.data)
+    if choice == "Create data points":
+        init = InitManagerTab()
+        init_type, initpts = init.set_page()
+        # init_bounds = set_names_bounds(init.dim)
+        bo_run.bounds = set_names_bounds(init.dim)
+        bo_run.min, bo_run.noise = init.set_opt_params()
+
+        if st.button("Generate points"):
+            if bo_run.verify_bounds(bo_run.bounds):
+                init_manager = init.set_init_manager(
+                    init_type,
+                    initpts,
+                    bo_run.bounds,
+                )
+                init_pts = init_manager.get_all()
+                # concatenate an empty column for target values to df and save to session state
+                st.session_state["init_pts"] = init.add_var_names(
+                    init_pts, st.session_state["init_vars"]
+                )
+
+        # Display an editable df for initial points
+        if (
+                st.session_state["init_pts"] is not None
+                and len(st.session_state["init_pts"].columns) == init.dim + 1
+                and not np.isnan(bo_run.bounds).any()
+                and "" not in list(st.session_state["init_vars"].keys())
+                and not bo_run.has_run
+        ):
+            bo_run.data = st.data_editor(st.session_state["init_pts"])
+            # df with bounds, only seen when downloaded, not shown in UI
+            bo_run.data = init.add_bounds_to_dataframe(
+                bo_run.data, st.session_state["init_vars"]
+            )
+            init.download_init_points(bo_run.data)
+
+    elif choice == "Upload file":
+        bo_run.data = run_help.upload_file()
+        run_help.find_metadata()
+        if not bo_run.has_run:
+            # Only continue if some data exists
+            if bo_run.data is not None:
+                bo_run.bounds_exist = find_bounds(bo_run.data)
+                # File doesn't have any bounds.
+                if not bo_run.bounds_exist:
+                    bo_run.choose_inputs_and_outputs()
+
+                # Parse parameters from uploaded file or initial data points
+                else:
+                    bo_run.X_names = [c for c in bo_run.data.columns if "input-var" in c]
+                    bo_run.Y_name = [c for c in bo_run.data.columns if "output-var" in c]
+                    bo_run.dim = bo_run.X_vals.shape[1]
+                    bo_run.parse_params(bo_run.data)
+                    bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
+
+                # if input/output variables have been selected we can
+                # ask/display bounds and other keywords
+                if len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
+                    bo_run.input_X_bounds(bo_run.bounds)
+                    bo_run.set_opt_params()
 
 with run_tab:
     st.write("#### Run BOSS iterations here.")
-    if not bo_run.has_run:
-        # Use init points if they exist. Otherwise, use uploaded file.
-        if st.session_state["init_pts"] is None:
-            bo_run.data = run_help.upload_file()
-
-        # Only continue if some data exists
-        if bo_run.data is not None:
-            bo_run.bounds_exist = find_bounds(bo_run.data)
-            # File doesn't have any bounds.
-            if not bo_run.bounds_exist:
-                bo_run.choose_inputs_and_outputs()
-
-            # Parse parameters from uploaded file or initial data points
-            else:
-                bo_run.X_names = [c for c in bo_run.data.columns if "input-var" in c]
-                bo_run.Y_name = [c for c in bo_run.data.columns if "output-var" in c]
-                bo_run.dim = bo_run.X_vals.shape[1]
-                bo_run.parse_params(bo_run.data)
-                bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
-
-            # if input/output variables have been selected we can
-            # ask/display bounds and other keywords
-            if len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
-                bo_run.input_X_bounds(bo_run.bounds)
-                bo_run.set_opt_params()
+    # if not bo_run.has_run:
+    #     # Use init points if they exist. Otherwise, use uploaded file.
+    #     # if st.session_state["init_pts"] is None:
+    #     #     bo_run.data = run_help.upload_file()
+    #
+    #     # Only continue if some data exists
+    #     if bo_run.data is not None:
+    #         bo_run.bounds_exist = find_bounds(bo_run.data)
+    #         # File doesn't have any bounds.
+    #         if not bo_run.bounds_exist:
+    #             bo_run.choose_inputs_and_outputs()
+    #
+    #         # Parse parameters from uploaded file or initial data points
+    #         else:
+    #             bo_run.X_names = [c for c in bo_run.data.columns if "input-var" in c]
+    #             bo_run.Y_name = [c for c in bo_run.data.columns if "output-var" in c]
+    #             bo_run.dim = bo_run.X_vals.shape[1]
+    #             bo_run.parse_params(bo_run.data)
+    #             bo_run.data = bo_run.data[bo_run.X_names + bo_run.Y_name]
+    #
+    #         # if input/output variables have been selected we can
+    #         # ask/display bounds and other keywords
+    #         if len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
+    #             bo_run.input_X_bounds(bo_run.bounds)
+    #             bo_run.set_opt_params()
 
     # BO has been run: disable input widgets and only display results
-    elif bo_run.has_run:
+    if bo_run.has_run:
         bo_run.input_X_bounds(bo_run.bounds)
         bo_run.set_opt_params()
         bo_run.display_result()
         bo_run.display_next_acq()
+        bo_run.data_to_str()
 
-    # Display an editable dataframe
+    # Display an editable dataframe for exisiting data
     if bo_run.data is not None and len(bo_run.X_names) > 0 and len(bo_run.Y_name) == 1:
         bo_run.data = st.data_editor(bo_run.data, key="edit_data")
         bo_run.download()
 
+    # TODO: refactor and clean up the if conditions
     # regardless of whether BO has been run we want to display the run button
     if bo_run.data is not None:
         if st.button("Run BO iteration", type="primary"):
@@ -144,5 +182,5 @@ with postprocess_tab:
             pp.display_acqfns()
     else:
         st.warning(
-            "⚠️ No optimization results available. Please run BOSS in the tab Run BOSS."
+            "⚠️ No optimization results available. Please set up in 'Set up BOSS' tab and run in 'Run BOSS' tab."
         )

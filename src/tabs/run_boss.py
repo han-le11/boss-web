@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import tomli_w
 import streamlit as st
 from boss.bo.bo_main import BOMain
 
@@ -28,12 +29,12 @@ class RunBOSS:
         self.Y_name = None
         self.dim = None
         self.kernel = "rbf"
-        self.min_max = "Minimize"  # whether to minimize or maximize
+        self.min = "yes"  # yes if minimize, no if maximize
         self.noise = noise
         self.X_next = None
         self.results = res
         self.has_run = False
-        self.dload_data = None  # data for download
+        self.dload_data = None  # data format only for download, not displayed in UI
 
     @property
     def X_vals(self):
@@ -97,8 +98,8 @@ class RunBOSS:
             self.noise = df["noise variance"][0]
         if "noise" in df.columns:
             self.noise = df["noise"][0]
-        if "goal" in df.columns:
-            self.min_max = df["goal"][0].lower()
+        if "minimize" in df.columns:
+            self.min = df["minimize"][0].lower()
 
     def _display_input_widgets(
             self, d: int, cur_bounds: np.ndarray = None
@@ -161,11 +162,13 @@ class RunBOSS:
         """
         col1, col2 = st.columns(2)
         with col1:
-            self.min_max = st.selectbox(
-                "Minimize or maximize the target value?",
-                options=("Minimize", "Maximize"),
+            self.min = st.selectbox(
+                "Minimize the output value?",
+                options=("yes", "no"),
                 disabled=self.has_run,
-                index=0 if self.min_max.lower() == "minimize" else 1,
+                index=0 if self.min.lower() == "yes" else 1,
+                help="Choose yes if you want to minimize the output variable value. If you want to maximize it, "
+                     "choose no."
             )
         with col2:
             self.noise = st.number_input(
@@ -197,6 +200,7 @@ class RunBOSS:
                 return True
 
     def verify_data(self):
+        st.write("current data \n", self.data)
         if self.data.isnull().values.any():
             st.error("⚠️ Please fill in the empty cells or download the data if you want to continue later.")
             return False
@@ -216,12 +220,11 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
-        if self.min_max.lower() == "minimize":
+        if self.min.lower() == "yes":
             self.results = bo.run(self.X_vals, self.Y_vals)
-            self.has_run = True
-        elif self.min_max.lower() == "maximize":
+        elif self.min.lower() == "no":
             self.results = bo.run(self.X_vals, -self.Y_vals)
-            self.has_run = True
+        self.has_run = True
 
     def display_result(self) -> None:
         """
@@ -241,7 +244,7 @@ class RunBOSS:
                 glmin[key] = val
             res = ", ".join(str(key) + " = " + str(val) for key, val in glmin.items())
             if self.X_names is not None:
-                if self.min_max == "Maximize":
+                if self.min.lower() == "no":
                     st.success(
                         f"Predicted global maximum: {self.Y_name[0]} = {-mu_glmin} at \n {res}.",
                         icon="✅",
@@ -280,6 +283,7 @@ class RunBOSS:
                 acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
                 self.data = pd.concat([self.data, acq], ignore_index=True)
 
+    # TODO: Will be obsolete when we have the new csv format.
     def add_bounds(self) -> None:
         """
         Add the bounds to the data table, only used when downloading data.
@@ -300,7 +304,7 @@ class RunBOSS:
             if not self.bounds_exist:
                 var_names[d] = "input-var " + self.X_names[d]
             bound_name = self.X_names[d].removeprefix("input-var ")
-            var_names.append(f"boss-bound {bound_name}")  # store column names for the returned df
+            var_names.append(f"#boss-bound {bound_name}")  # store column names for the returned df
 
         data = np.concatenate((self.data, bounds_arr), axis=1)
         self.dload_data = pd.DataFrame(data=data, columns=var_names)
@@ -311,10 +315,37 @@ class RunBOSS:
 
         :return: None
         """
-        self.dload_data["noise variance"] = None
-        self.dload_data["noise variance"][0] = self.noise
-        self.dload_data["goal"] = None
-        self.dload_data["goal"][0] = self.min_max  # whether to minimize or maximize
+        self.dload_data["#noise variance"] = None
+        self.dload_data["#noise variance"][0] = self.noise
+        self.dload_data["#minimize"] = None
+        self.dload_data["#minimize"][0] = self.min  # whether to minimize or maximize
+
+    def data_to_str(self):
+        """
+        Write the metadata as comment lines (indicated by a hash at the start of a line).
+        the data to string.
+        """
+        metadata = {
+            'noise': self.noise,
+            'min': self.min,
+        }
+        for d in range(self.dim):
+            metadata['lower ' + self.X_names[d]] = self.bounds[d][0]
+            metadata['upper ' + self.X_names[d]] = self.bounds[d][1]
+        metadata_str = tomli_w.dumps(metadata)
+        # remove double quotes
+        metadata_str = metadata_str.replace('"', "")
+        # add hash at the beginning of each line
+        metadata_str = "\n".join(["#" + line for line in metadata_str[:-1].split("\n")])
+
+        self.dload_data = metadata_str + "\n" + self.data.to_csv(index=False)
+        st.download_button(
+            label="Download new",
+            data=self.dload_data,
+            file_name="new_data.csv",
+            mime="text/csv",
+            key="new",
+        )
 
     def download(self) -> None:
         """
@@ -323,10 +354,10 @@ class RunBOSS:
         :return: None
         """
         self.add_bounds()
-        self.add_params()
+        # self.add_params()
         st.download_button(
             label="Download",
-            data=self.dload_data.to_csv(index=False).encode("utf-8"),
+            data=self.dload_data.to_csv(index=False, encoding="utf-8"),
             file_name="boss_data.csv",
             mime="text/csv",
             key="download_data",
