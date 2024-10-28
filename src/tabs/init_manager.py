@@ -4,75 +4,27 @@ import streamlit as st
 from boss.bo.initmanager import InitManager
 
 
-def set_names_bounds(dimension: int) -> (np.array, dict):
+class InitPointsSetUp:
     """
-    Return an array of input bounds and a dictionary of variable names and corresponding bounds.
-
-    :param dimension: int
-        dimension of the search space of input variables.
-
-    :return:
-    bounds: ndarray
-        An array of input bounds, which is used to generate initial points with InitManager.
-    names_and_bounds: dict
-        A dictionary of variable names (keys) and corresponding bounds (values).
+    Class for setting up initial data points.
+    Not to be confused with InitManager from BOSS, which is used to generate initial data points.
     """
-    bounds = np.ones(shape=(dimension, 2)) * np.nan
-    st.session_state["init_vars"] = dict()
-    for d in range(dimension):
-        col1, col2, col3 = st.columns(3, gap="large")
-        with col1:
-            var_name = st.text_input(
-                f"Please write the name of variable {d + 1}",
-                max_chars=50,
-                help="A descriptive name will be great!",
-                key=f"var_{d}_{st.session_state.input_key}",
-            )
-
-            if var_name:
-                var_name = "input-var " + var_name
-                with col2:
-                    bounds[d, 0] = st.number_input(
-                        f"Lower bound of {var_name} *",
-                        format="%.3f",
-                        key=f"lower {d}",
-                        value=None,
-                    )
-                with col3:
-                    bounds[d, 1] = st.number_input(
-                        f"Upper bound of {var_name} *",
-                        format="%.3f",
-                        key=f"upper {d}",
-                        value=None,
-                    )
-            st.session_state["init_vars"][var_name] = bounds[d, :]
-
-    # Make one widget to input target variable name
-    col1, col2, col3 = st.columns(3, gap="large")
-    with col1:
-        y_name = st.text_input(
-            f"Write the name of the output variable",
-            max_chars=50,
-            help="A descriptive name will be great!",
-            key=f"target_{st.session_state.input_key}",
-        )
-        y_name = "output-var " + y_name
-    st.session_state["init_vars"][y_name] = None  # for target values, bounds are assigned None
-    return bounds
-
-
-class InitManagerTab:
     def __init__(self):
         self.dim = None
         self.min = True
+        self.X_names = []
+        self.Y_names = []
+        self.data = None
+        self.bounds = None
+        self.num_init = 0  # number of generated initial points
 
-    def set_page(self):
+    def set_init_widgets(self):
         st.markdown(
             "#### If you don't have any data, create initial data points here."
         )
         st.markdown(
             "Please set the parameters below. Type in variable names and bounds. "
-            "Then, click on Create initial data. "
+            "Then, click on the 'Generate points' button. "
             "The initial data points will be shown in a table."
         )
         left, centre, right = st.columns(3, gap="large")
@@ -84,7 +36,7 @@ class InitManagerTab:
                 step=1,
             )
         with centre:
-            initpts = st.number_input(
+            self.num_init = st.number_input(
                 "How many initial data points to generate?",
                 min_value=1,
                 value=5,  # When this widget first renders, its value is 5
@@ -97,16 +49,14 @@ class InitManagerTab:
                 options=("sobol", "random", "grid"),
                 help="Select method for creating the initial sampling locations",
             )
-        return init_type, initpts
+        return init_type
 
-    def set_init_manager(self, init_type: str, initpts: int, bounds) -> InitManager:
+    def set_init_manager(self, init_type: str, bounds) -> InitManager:
         """
         Return an InitManager instance of the InitManager class (from BOSS library).
 
         :param init_type: str
             The method of generating initial points.
-        :param initpts: int
-            The number of initial data points.
         :param bounds:
             The bounds of all variables.
 
@@ -121,8 +71,9 @@ class InitManagerTab:
                 st.error("⚠️ Please set bounds for all variables.")
             else:
                 return InitManager(inittype=init_type,
-                                   initpts=initpts,
-                                   bounds=bounds,)
+                                   initpts=self.num_init,
+                                   bounds=bounds,
+                                   )
 
     @staticmethod
     def download_init_points(arr) -> None:
