@@ -3,35 +3,39 @@ import pandas as pd
 import tomli_w
 import streamlit as st
 from boss.bo.bo_main import BOMain
+from tabs.run_helper import RunHelper
 
 
 def dummy_func(_):
     pass
 
 
-class RunBOSS:
+class RunBOSS(RunHelper):
     """
     Class for running BOSS in the Run BOSS tab.
     """
 
     def __init__(
             self,
+            run_help=None,
             data=None,
             bounds=None,
             X_names=None,
             noise=0.0,
             res=None,
     ):
+        self.dim = run_help.dim if run_help is not None else None
+        # self.dim = None
         self.data = data
         self.bounds = bounds
-        self.bounds_exist = False
+        self.has_metadata = False
         self.X_names = X_names or []
         self.Y_name = None
-        self.dim = None
         self.kernel = "rbf"
-        self.min = "yes"  # yes if minimize, no if maximize
+        self.min = True  # True if minimize, False if maximize
         self.noise = noise
-        self.X_next = None
+        # number of points that can be treated as initial points
+        self.num_init = self.data.shape[0] if self.data is not None else 0
         self.results = res
         self.has_run = False
         self.dload_data = None  # data format only for download, not displayed in UI
@@ -58,6 +62,15 @@ class RunBOSS:
         """
         return self.data[self.Y_name].to_numpy()
 
+    def strip_white_spaces(self) -> None:
+        """
+        Remove leading, trailing, and in-between whitespace in variable names (X_name and Y_name) if there is any.
+        """
+        for x in self.X_names:
+            x.strip().replace(" ", "")
+        for y in self.Y_name:
+            y.strip().replace(" ", "")
+
     def choose_inputs_and_outputs(self) -> None:
         """
         If there is no bounds in the uploaded file, display widgets that let users choose at least one column
@@ -71,6 +84,7 @@ class RunBOSS:
                 "Choose input variables *",
                 options=list(self.data.columns),
                 default=None,
+                help="Do not use empty space in variable names."
             )
         with out_col:
             self.Y_name = st.multiselect(
@@ -78,28 +92,30 @@ class RunBOSS:
                 options=list(self.data.columns),
                 default=None,
                 max_selections=1,
+                help="Do not use empty space in variable names."
             )
+        self.strip_white_spaces()
         self.dim = len(self.X_names)
         self.data = self.data[self.X_names + self.Y_name]
 
-    def parse_params(self, df) -> None:
+    def parse_params(self, metadata) -> None:
         """
         Return the variable names and bounds to run with BOMain object.
 
-        :param df:
-            Uploaded file, which is read into a dataframe.
+        :param metadata: dict
+            Metadata obtained from the uploaded file.
 
         :return: None
         """
-        bounds_array = df.filter(regex="boss-bound").dropna().to_numpy()
-        self.bounds = np.transpose(bounds_array)
+        st.write("test obtained metadata: ", metadata)
+        self.noise = metadata.get('noise', 0)
+        self.min = metadata.get('min', True)
+        self.data.columns = [c.strip().replace(" ", "") for c in self.data.columns]
+        self.X_names = [c for c in self.data.columns if c in metadata.keys()]
+        st.write("column names: ", self.data.columns)
+        self.Y_name = [c for c in self.data.columns if c not in metadata.keys()]
+        self.bounds = np.array([metadata.get(x, None) for x in self.X_names])
         self.dim = self.bounds.shape[0]
-        if "noise variance" in df.columns:
-            self.noise = df["noise variance"][0]
-        if "noise" in df.columns:
-            self.noise = df["noise"][0]
-        if "minimize" in df.columns:
-            self.min = df["minimize"][0].lower()
 
     def _display_input_widgets(
             self, d: int, cur_bounds: np.ndarray = None
@@ -118,7 +134,7 @@ class RunBOSS:
         """
         left, right = st.columns(2)
 
-        # Display None if file doesn't contain bounds. Otherwise, use the bounds from file.
+        # Display None if uploaded file doesn't contain bounds. Otherwise, use the bounds from file.
         with left:
             lower = st.number_input(
                 "Lower bound of {var}".format(var=self.X_names[d]),
@@ -139,24 +155,28 @@ class RunBOSS:
 
     def input_X_bounds(self, defaults=None) -> None:
         """
-        Display the number input widgets based on the dimension and input variable names.
+        Display the number input widgets accordingly to the set dimension and input variable names.
+        If the uploaded file contains the bounds of input variables, prefill widgets with those bounds.
 
         :param defaults: None or ndarray
             Default values of lower and upper bounds in input widgets when they first render.
 
         :return: None
         """
-        if not self.bounds_exist:
-            self.bounds = np.empty(shape=(self.dim, 2))
+        if not self.has_metadata:
+            self.bounds = np.empty(shape=(self.dim, 2))  # array size: dim by 2 (lower bound and upper bound)
+
         for d in range(self.dim):
-            cur_bounds = None if not self.bounds_exist else defaults[d]
+            cur_bounds = None if not self.has_metadata else defaults[d]
             lower_b, upper_b = self._display_input_widgets(d, cur_bounds)
             self.bounds[d, 0] = lower_b
             self.bounds[d, 1] = upper_b
+        st.write("Bounds of input variables set.", self.bounds)
 
     def set_opt_params(self) -> None:
         """
-        Set parameters for minimization/maximization choice and noise variance.
+        Display the widgets for choosing minimization/maximization and noise variance.
+        If the uploaded file contains these hyperparameters, prefill widgets with those information.
 
         :return: None
         """
@@ -164,9 +184,9 @@ class RunBOSS:
         with col1:
             self.min = st.selectbox(
                 "Minimize the output value?",
-                options=("yes", "no"),
+                options=(True, False),
                 disabled=self.has_run,
-                index=0 if self.min.lower() == "yes" else 1,
+                index=0 if self.min is True else 1,
                 help="Choose yes if you want to minimize the output variable value. If you want to maximize it, "
                      "choose no."
             )
@@ -199,8 +219,7 @@ class RunBOSS:
             if not np.isnan(bounds).any() and np.all(bounds[:, 0] < bounds[:, 1]):
                 return True
 
-    def verify_data(self):
-        st.write("current data \n", self.data)
+    def verify_data(self) -> bool:
         if self.data.isnull().values.any():
             st.error("⚠️ Please fill in the empty cells or download the data if you want to continue later.")
             return False
@@ -220,9 +239,9 @@ class RunBOSS:
             noise=self.noise,
             iterpts=0,
         )
-        if self.min.lower() == "yes":
+        if self.min:
             self.results = bo.run(self.X_vals, self.Y_vals)
-        elif self.min.lower() == "no":
+        else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
         self.has_run = True
 
@@ -244,7 +263,7 @@ class RunBOSS:
                 glmin[key] = val
             res = ", ".join(str(key) + " = " + str(val) for key, val in glmin.items())
             if self.X_names is not None:
-                if self.min.lower() == "no":
+                if self.min is False:
                     st.success(
                         f"Predicted global maximum: {self.Y_name[0]} = {-mu_glmin} at \n {res}.",
                         icon="✅",
@@ -275,6 +294,8 @@ class RunBOSS:
     def concat_next_acq(self) -> None:
         """
         Concatenate the next acquisition location to the data table.
+
+        :return: None
         """
         if self.results is not None:
             X_next = self.results.get_next_acq(-1)
@@ -283,82 +304,35 @@ class RunBOSS:
                 acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
                 self.data = pd.concat([self.data, acq], ignore_index=True)
 
-    # TODO: Will be obsolete when we have the new csv format.
-    def add_bounds(self) -> None:
+    def download_data(self) -> None:
         """
-        Add the bounds to the data table, only used when downloading data.
+        Add the metadata as comment lines (indicated by a hash at the start of a line).
+        Display a download button for data with the metadata.
 
         :return: None
-        """
-        var_names = self.X_names + self.Y_name  # store column names for the final df
-
-        # Add "output-var " in front of output name so the file will be parsed correctly later
-        if not self.bounds_exist:
-            var_names[-1] = "output-var " + self.Y_name[0]
-
-        bounds_arr = np.zeros(shape=(self.data.shape[0], self.dim)) * np.nan
-        for d in range(self.dim):
-            # filling the bounds array
-            bounds_arr[0, d] = self.bounds[d][0]
-            bounds_arr[1, d] = self.bounds[d][1]
-            if not self.bounds_exist:
-                var_names[d] = "input-var " + self.X_names[d]
-            bound_name = self.X_names[d].removeprefix("input-var ")
-            var_names.append(f"#boss-bound {bound_name}")  # store column names for the returned df
-
-        data = np.concatenate((self.data, bounds_arr), axis=1)
-        self.dload_data = pd.DataFrame(data=data, columns=var_names)
-
-    def add_params(self) -> None:
-        """
-        Add the noise variance and to the dataframe. This function is only used for downloaded data.
-
-        :return: None
-        """
-        self.dload_data["#noise variance"] = None
-        self.dload_data["#noise variance"][0] = self.noise
-        self.dload_data["#minimize"] = None
-        self.dload_data["#minimize"][0] = self.min  # whether to minimize or maximize
-
-    def data_to_str(self):
-        """
-        Write the metadata as comment lines (indicated by a hash at the start of a line).
-        the data to string.
         """
         metadata = {
             'noise': self.noise,
             'min': self.min,
         }
-        for d in range(self.dim):
-            metadata['lower ' + self.X_names[d]] = self.bounds[d][0]
-            metadata['upper ' + self.X_names[d]] = self.bounds[d][1]
+        st.write(self.X_names)
+        for d in range(0, self.dim):
+            metadata[self.X_names[d]] = str(self.bounds[d].tolist())
         metadata_str = tomli_w.dumps(metadata)
-        # remove double quotes
+
+        # remove double quotes and whitespaces anywhere
         metadata_str = metadata_str.replace('"', "")
+        metadata_str = metadata_str.replace(" ", "")
+        self.strip_white_spaces()
+
         # add hash at the beginning of each line
         metadata_str = "\n".join(["#" + line for line in metadata_str[:-1].split("\n")])
-
         self.dload_data = metadata_str + "\n" + self.data.to_csv(index=False)
         st.download_button(
-            label="Download new",
+            label="Download",
             data=self.dload_data,
             file_name="new_data.csv",
             mime="text/csv",
             key="new",
         )
 
-    def download(self) -> None:
-        """
-        Make a download button for the dataset with bounds and other parameters.
-
-        :return: None
-        """
-        self.add_bounds()
-        # self.add_params()
-        st.download_button(
-            label="Download",
-            data=self.dload_data.to_csv(index=False, encoding="utf-8"),
-            file_name="boss_data.csv",
-            mime="text/csv",
-            key="download_data",
-        )
