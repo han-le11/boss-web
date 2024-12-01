@@ -3,16 +3,15 @@ import pandas as pd
 import tomli_w
 import streamlit as st
 from boss.bo.bo_main import BOMain
-from tabs.run_helper import RunHelper
 
 
 def dummy_func(_):
     pass
 
 
-class RunBOSS(RunHelper):
+class RunBOSS:
     """
-    Class for running BOSS in the Run BOSS tab.
+    Class for running BOSS.
     """
 
     def __init__(
@@ -25,17 +24,15 @@ class RunBOSS(RunHelper):
             res=None,
     ):
         self.dim = run_help.dim if run_help is not None else None
-        # self.dim = None
         self.data = data
         self.bounds = bounds
         self.has_metadata = False
         self.X_names = X_names or []
-        self.Y_name = None
+        self.Y_names = None
         self.kernel = "rbf"
         self.min = True  # True if minimize, False if maximize
         self.noise = noise
-        # number of points that can be treated as initial points
-        self.num_init = self.data.shape[0] if self.data is not None else 0
+        self.num_init = None  # number of points that can be treated as initial points
         self.results = res
         self.has_run = False
         self.dload_data = None  # data format only for download, not displayed in UI
@@ -60,7 +57,7 @@ class RunBOSS(RunHelper):
         Y_vals: ndarray
             Numpy array of the Y values.
         """
-        return self.data[self.Y_name].to_numpy()
+        return self.data[self.Y_names].to_numpy()
 
     def strip_white_spaces(self) -> None:
         """
@@ -68,7 +65,7 @@ class RunBOSS(RunHelper):
         """
         for x in self.X_names:
             x.strip().replace(" ", "")
-        for y in self.Y_name:
+        for y in self.Y_names:
             y.strip().replace(" ", "")
 
     def choose_inputs_and_outputs(self) -> None:
@@ -87,7 +84,7 @@ class RunBOSS(RunHelper):
                 help="Do not use empty space in variable names."
             )
         with out_col:
-            self.Y_name = st.multiselect(
+            self.Y_names = st.multiselect(
                 "Choose one output variable *",
                 options=list(self.data.columns),
                 default=None,
@@ -96,7 +93,7 @@ class RunBOSS(RunHelper):
             )
         self.strip_white_spaces()
         self.dim = len(self.X_names)
-        self.data = self.data[self.X_names + self.Y_name]
+        self.data = self.data[self.X_names + self.Y_names]
 
     def parse_params(self, metadata) -> None:
         """
@@ -107,13 +104,13 @@ class RunBOSS(RunHelper):
 
         :return: None
         """
-        st.write("test obtained metadata: ", metadata)
         self.noise = metadata.get('noise', 0)
         self.min = metadata.get('min', True)
         self.data.columns = [c.strip().replace(" ", "") for c in self.data.columns]
+        # Input vars are the ones that have bounds in the metadata
         self.X_names = [c for c in self.data.columns if c in metadata.keys()]
-        st.write("column names: ", self.data.columns)
-        self.Y_name = [c for c in self.data.columns if c not in metadata.keys()]
+        # Output vars are the ones that do not have bounds in the metadata, as their [min, max] is used as default
+        self.Y_names = [c for c in self.data.columns if c not in metadata.keys()]
         self.bounds = np.array([metadata.get(x, None) for x in self.X_names])
         self.dim = self.bounds.shape[0]
 
@@ -153,25 +150,25 @@ class RunBOSS(RunHelper):
             )
         return lower, upper
 
-    def input_X_bounds(self, defaults=None) -> None:
+    def input_X_bounds(self, defaults: str | None = None) -> None:
         """
         Display the number input widgets accordingly to the set dimension and input variable names.
         If the uploaded file contains the bounds of input variables, prefill widgets with those bounds.
 
-        :param defaults: None or ndarray
+        :param defaults: ndarray or None
             Default values of lower and upper bounds in input widgets when they first render.
-
         :return: None
         """
-        if not self.has_metadata:
-            self.bounds = np.empty(shape=(self.dim, 2))  # array size: dim by 2 (lower bound and upper bound)
-
-        for d in range(self.dim):
-            cur_bounds = None if not self.has_metadata else defaults[d]
-            lower_b, upper_b = self._display_input_widgets(d, cur_bounds)
-            self.bounds[d, 0] = lower_b
-            self.bounds[d, 1] = upper_b
-        st.write("Bounds of input variables set.", self.bounds)
+        # if input/output variables have been selected we can
+        # ask/display bounds and other keywords
+        if len(self.X_names) > 0 and len(self.Y_names) >= 1:
+            if not self.has_metadata:
+                self.bounds = np.empty(shape=(self.dim, 2))  # array size: dim by 2 (lower bound and upper bound)
+            for d in range(self.dim):
+                cur_bounds = None if not self.has_metadata else defaults[d]
+                lower_b, upper_b = self._display_input_widgets(d, cur_bounds)
+                self.bounds[d, 0] = lower_b
+                self.bounds[d, 1] = upper_b
 
     def set_opt_params(self) -> None:
         """
@@ -243,6 +240,7 @@ class RunBOSS(RunHelper):
             self.results = bo.run(self.X_vals, self.Y_vals)
         else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
+        self.results.set_num_init_batches(self.num_init)
         self.has_run = True
 
     def display_result(self) -> None:
@@ -265,12 +263,12 @@ class RunBOSS(RunHelper):
             if self.X_names is not None:
                 if self.min is False:
                     st.success(
-                        f"Predicted global maximum: {self.Y_name[0]} = {-mu_glmin} at \n {res}.",
+                        f"Predicted global maximum: {self.Y_names[0]} = {-mu_glmin} at \n {res}.",
                         icon="✅",
                     )
                 else:
                     st.success(
-                        f"Predicted global minimum: {self.Y_name[0]} = {mu_glmin} at \n {res}.",
+                        f"Predicted global minimum: {self.Y_names[0]} = {mu_glmin} at \n {res}.",
                         icon="✅",
                     )
 
@@ -301,10 +299,10 @@ class RunBOSS(RunHelper):
             X_next = self.results.get_next_acq(-1)
             if X_next is not None:
                 XY_next = np.concatenate((X_next, np.ones(shape=(X_next.shape[0], 1)) * np.nan), axis=1)
-                acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_name)
+                acq = pd.DataFrame(data=XY_next, columns=self.X_names + self.Y_names)
                 self.data = pd.concat([self.data, acq], ignore_index=True)
 
-    def download_data(self) -> None:
+    def add_metadata(self) -> None:
         """
         Add the metadata as comment lines (indicated by a hash at the start of a line).
         Display a download button for data with the metadata.
@@ -314,25 +312,35 @@ class RunBOSS(RunHelper):
         metadata = {
             'noise': self.noise,
             'min': self.min,
+            'num-init': self.num_init if self.num_init is not None else 0,
         }
-        st.write(self.X_names)
         for d in range(0, self.dim):
             metadata[self.X_names[d]] = str(self.bounds[d].tolist())
         metadata_str = tomli_w.dumps(metadata)
 
-        # remove double quotes and whitespaces anywhere
+        # remove double quotes
         metadata_str = metadata_str.replace('"', "")
-        metadata_str = metadata_str.replace(" ", "")
+        # remove any whitespaces (leading, trailing, in-between words)
         self.strip_white_spaces()
 
         # add hash at the beginning of each line
         metadata_str = "\n".join(["#" + line for line in metadata_str[:-1].split("\n")])
         self.dload_data = metadata_str + "\n" + self.data.to_csv(index=False)
+
+    def download_data(self, widget_key: str) -> None:
+        """
+        Display a download button for data, with the metadata.
+
+        :param widget_key: The key to make the download button widget unique.
+
+        :return: None
+        """
         st.download_button(
             label="Download",
             data=self.dload_data,
-            file_name="new_data.csv",
+            file_name="boss_data.csv",
             mime="text/csv",
-            key="new",
+            key=widget_key,
         )
+
 

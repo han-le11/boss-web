@@ -1,7 +1,11 @@
 import numpy as np
 import os
+import re  # Regular expression operations
 import streamlit as st
+from pathlib import Path
 from PIL import Image
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 
 
 class PostprocessingTab:
@@ -9,6 +13,8 @@ class PostprocessingTab:
         self.bo_results = bo_results
         self.x_names = x_names
         self.expander = None
+        self.model_plots = []
+        self.uncert_plots = []
 
     def input_pp_iters(self):
         pp_iters = st.multiselect(
@@ -53,34 +59,59 @@ class PostprocessingTab:
         pp_dir = "./postprocessing/graphs_models"
         self._show_plots(
             pp_dir,
-            "Model plots",
+            "Select an iteration to display the model and uncertainty plots.",
             "No model plots to display. Make sure that you have chosen to plot something.",
         )
 
     def display_acqfns(self) -> None:
-        path = "./postprocessing/graphs_acqfns"
+        path = "./postprocessing/graphs_models"
         self._show_plots(
             path, "Acquisition function", "No other plots for acquisition functions."
         )
 
+    # TODO: refactor this to display model plots of n-interations and make it cleaner
     def _show_plots(self, path, title, warning_text) -> None:
+        col1, col2 = st.columns(2)
         if os.path.isdir(path):
-            self.expander = st.expander(title, expanded=True)
+            # self.expander = st.expander(title, expanded=True)
             for path, directories, files in os.walk(path):
-                columns = self.expander.columns(2, gap="medium")
                 for i, file in enumerate(files):
-                    if file.endswith(("png", "jpg")):
-                        with columns[i]:
-                            img_path = os.path.join(path, file)
-                            img = Image.open(img_path)
-                            if "uncert" in img_path:
-                                st.image(
-                                    img, caption="Uncertainty over the search space"
-                                )
-                            else:
-                                st.image(
-                                    img,
-                                    caption="Acquisitions, next acquisition, and global minimum",
-                                )
+                    img_path = os.path.join(path, file)
+                    img = Image.open(img_path)
+                    if "uncert" not in img_path:
+                        self.model_plots.append(img)
+                    else:
+                        self.uncert_plots.append(img)
         else:
             st.warning(warning_text)
+
+        # display plots
+        with col1:
+            model_iter = st.slider("Select an iteration to display a model plot",
+                                   min_value=0, max_value=len(self.model_plots), key="model")
+            st.image(self.model_plots[model_iter-1], width=500)
+        with col2:
+            uncert_iter = st.slider("Select an iteration to display an uncertainty plot",
+                                    min_value=0, max_value=len(self.uncert_plots), key="uncert")
+            st.image(self.uncert_plots[uncert_iter-1], width=500)
+
+    def load_model_plots(self):
+        """
+        Finds and sorts all model graphs, then returns them as PIL images.
+        """
+        basedir = Path.cwd() / "postprocessing/graphs_models"
+        # The number following npts is captured in a group (\d+) for sorting later.
+        rgx = re.compile(r"\w+npts(\d+).png")
+        uncert_rgx = re.compile(r"\w+npts(\d+)+_uncert.png")
+
+        # Find model plots
+        model_matches = [re.search(rgx, str(f)) for f in basedir.iterdir()]
+        model_matches = [m for m in model_matches if m]  # remove null matches
+        model_matches.sort(key=lambda m: int(m.group(1)))
+        model_paths = [basedir / m.group(0) for m in model_matches]
+        # Load images and display initial image
+        self.model_plots = [Image.open(path) for path in model_paths]
+        st.select_slider(label="Select an iteration",
+                         options=self.model_plots,)
+
+
