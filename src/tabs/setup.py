@@ -18,18 +18,19 @@ def reset():
     st.session_state["init_pts"] = None
 
 
-class RunHelper:
+class SetUp:
     """
     Helper class for running BOSS optimization.
     """
 
     def __init__(self) -> None:
         self.file = None
+        self.bounds = None
         self.dim = None
         self.has_metadata = False  # whether the file contains metadata
         self.metadata = None  # dictionary of metadata of BOSS parameters
 
-    def set_names_bounds(self, dimension: int) -> np.array:
+    def set_init_bounds(self, dimension: int) -> np.array:
         """
         Return an array of input bounds and a dictionary of variable names and corresponding bounds.
 
@@ -40,48 +41,46 @@ class RunHelper:
         bounds: ndarray
             An array of input bounds, which is used to generate initial points with InitManager.
         """
-        bounds = np.ones(shape=(dimension, 2)) * np.nan
+        self.bounds = np.ones(shape=(dimension, 2)) * np.nan
         st.session_state["init_vars"] = dict()
         for d in range(dimension):
             col1, col2, col3 = st.columns(3, gap="large")
             with col1:
                 var_name = st.text_input(
-                    f"Please write the name of variable {d + 1}",
+                    f"Name of variable {d + 1}",
                     max_chars=50,
                     help="A descriptive name will be great!",
                     key=f"var_{d}_{st.session_state.input_key}",
                 )
 
                 if var_name:
-                    var_name = "input-var " + var_name
                     with col2:
-                        bounds[d, 0] = st.number_input(
-                            f"Lower bound of {var_name} *",
+                        self.bounds[d, 0] = st.number_input(
+                            f"Lower bound of {var_name}",
                             format="%.3f",
                             key=f"lower {d}",
                             value=None,
                         )
                     with col3:
-                        bounds[d, 1] = st.number_input(
-                            f"Upper bound of {var_name} *",
+                        self.bounds[d, 1] = st.number_input(
+                            f"Upper bound of {var_name}",
                             format="%.3f",
                             key=f"upper {d}",
                             value=None,
                         )
-                st.session_state["init_vars"][var_name] = bounds[d, :]
+                st.session_state["init_vars"][var_name] = self.bounds[d, :]
 
         # Make one widget to input target variable name
         col1, col2, col3 = st.columns(3, gap="large")
         with col1:
             y_name = st.text_input(
-                f"Write the name of the output variable",
+                f"Name of the output variable",
                 max_chars=50,
                 help="A descriptive name will be great!",
                 key=f"target_{st.session_state.input_key}",
             )
-            y_name = "output-var " + y_name
         st.session_state["init_vars"][y_name] = None  # for target values, bounds are assigned None
-        return bounds
+        return self.bounds
 
     def upload_file(self) -> pd.DataFrame:
         """
@@ -95,7 +94,7 @@ class RunHelper:
             label="The CSV file must use colons or semicolons as separators",
             type=["csv"],
             help="Your file should contain data for input variables and target variable",
-            key=f"uploader_{st.session_state.input_key}"
+            key=f"uploader_{st.session_state.input_key}",
         )
 
         if self.file is None:
@@ -125,7 +124,7 @@ class RunHelper:
         """
         Clear all input data and BOSS optimization results.
         """
-        # Make 2 placeholders to display the buttons.
+        # Make 2 placeholders to display the yes and no buttons.
         left, right = st.columns([1, 5])
         with left:
             if st.button("Yes", on_click=reset):
