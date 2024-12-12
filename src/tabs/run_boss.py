@@ -32,7 +32,7 @@ class RunBOSS:
         self.kernel = "rbf"
         self.min = True  # True if minimize, False if maximize
         self.noise = noise
-        self.num_init = None  # number of points that can be treated as initial points
+        self.num_init = 0  # number of points that can be treated as initial points
         self.results = res
         self.has_run = False
         self.dload_data = None  # data format only for download, not displayed in UI
@@ -104,6 +104,7 @@ class RunBOSS:
 
         :return: None
         """
+        self.num_init = metadata.get('num-init')
         self.noise = metadata.get('noise', 0)
         self.min = metadata.get('min', True)
         self.data.columns = [c.strip().replace(" ", "") for c in self.data.columns]
@@ -240,6 +241,7 @@ class RunBOSS:
             self.results = bo.run(self.X_vals, self.Y_vals)
         else:
             self.results = bo.run(self.X_vals, -self.Y_vals)
+        # tell BOSS how many of our batches/data points to treat as initial points
         self.results.set_num_init_batches(self.num_init)
         self.has_run = True
 
@@ -304,7 +306,7 @@ class RunBOSS:
 
     def add_metadata(self) -> None:
         """
-        Add the metadata as comment lines (indicated by a hash at the start of a line).
+        Add the metadata as comment lines (indicated by a hash '#' at the beginning of a line).
         Display a download button for data with the metadata.
 
         :return: None
@@ -312,7 +314,7 @@ class RunBOSS:
         metadata = {
             'noise': self.noise,
             'min': self.min,
-            'num-init': self.num_init if self.num_init is not None else 0,
+            'num-init': self.num_init,
         }
         for d in range(0, self.dim):
             metadata[self.X_names[d]] = str(self.bounds[d].tolist())

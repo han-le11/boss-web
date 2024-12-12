@@ -90,15 +90,14 @@ with setup_tab:
             # If BOSS hasn't been run, display widget to upload file.
             if not bo_run.has_run:
                 bo_run.data = setup.upload_file()
-
                 # Only continue if some data exists:
                 if bo_run.data is not None:
-
                     bo_run.has_metadata = setup.has_metadata
                     # TODO: refactor this if-else block to make these 2 cases less divergent
                     # File doesn't have any metadata.
                     if not bo_run.has_metadata:
                         bo_run.choose_inputs_and_outputs()
+                        bo_run.num_init = bo_run.data.shape[0]
                     # Parse parameters from uploaded file or initial data points
                     else:
                         bo_run.parse_params(setup.metadata)
@@ -160,7 +159,6 @@ with postprocess_tab:
             post.run()
 
         if pp.model_plots is not None:
-            # pp.load_model_plots()
             pp.display_model_and_uncertainty()
             # pp.display_acqfns()
     else:

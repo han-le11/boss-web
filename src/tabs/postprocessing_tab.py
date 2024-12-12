@@ -1,11 +1,7 @@
 import numpy as np
 import os
-import re  # Regular expression operations
 import streamlit as st
-from pathlib import Path
 from PIL import Image
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
 
 
 class PostprocessingTab:
@@ -15,6 +11,7 @@ class PostprocessingTab:
         self.expander = None
         self.model_plots = []
         self.uncert_plots = []
+        self.cur_iter = 0
 
     def input_pp_iters(self):
         pp_iters = st.multiselect(
@@ -32,7 +29,7 @@ class PostprocessingTab:
             "If not selected, you can customize which axes to plot.",
             value=True,
         )
-        model_slice = [1, 2, 50]
+        model_slice = [1, 2, 50]  # x axis, y axis, number of points per axis
         if not plot_acqfns and self.x_names is not None:
             x, y, z = self.input_model_slice()
             model_slice[0] = self.x_names.index(x) + 1
@@ -40,6 +37,7 @@ class PostprocessingTab:
             model_slice[2] = z
         return plot_acqfns, model_slice
 
+    # TODO: refactor for the new postprocessing structure
     def input_model_slice(self) -> (int, int, int):
         # pp_models_slice = [x,y,z]
         # x and y define the cross-section and z is grid
@@ -51,18 +49,11 @@ class PostprocessingTab:
             y = st.selectbox("Second axis of cross-section", options=self.x_names)
         with col3:
             z = st.number_input(
-                "Number of points per edge in the grid", value=50, step=1, min_value=1
+                "Number of points per axis in the grid", value=50, step=1, min_value=1
             )
         return x, y, z
 
-    def display_model_and_uncertainty(self) -> None:
-        pp_dir = "./postprocessing/graphs_models"
-        self._show_plots(
-            pp_dir,
-            "Select an iteration to display the model and uncertainty plots.",
-            "No model plots to display. Make sure that you have chosen to plot something.",
-        )
-
+    # TODO: check if refactor is needed
     def display_acqfns(self) -> None:
         path = "./postprocessing/graphs_models"
         self._show_plots(
@@ -70,7 +61,17 @@ class PostprocessingTab:
         )
 
     # TODO: refactor this to display model plots of n-interations and make it cleaner
-    def _show_plots(self, path, title, warning_text) -> None:
+    def _show_plots(self, path, title, warning) -> None:  # obj_1, obj_2, slider
+        """
+        Internal function to display plots.
+
+        :param path: str
+            The path of the plots.
+        :param title: str
+            The title of the plots.
+        :param warning: str
+            The warning text if no plots are found.
+        """
         col1, col2 = st.columns(2)
         if os.path.isdir(path):
             # self.expander = st.expander(title, expanded=True)
@@ -83,35 +84,39 @@ class PostprocessingTab:
                     else:
                         self.uncert_plots.append(img)
         else:
-            st.warning(warning_text)
+            st.warning(warning)
 
-        # display plots
+        self.cur_iter = st.slider(label="Next iteration", min_value=0, max_value=len(self.model_plots) - 1, key="iter")
         with col1:
-            model_iter = st.slider("Select an iteration to display a model plot",
-                                   min_value=0, max_value=len(self.model_plots), key="model")
-            st.image(self.model_plots[model_iter-1], width=500)
+            st.image(self.model_plots[self.cur_iter], width=500)
         with col2:
-            uncert_iter = st.slider("Select an iteration to display an uncertainty plot",
-                                    min_value=0, max_value=len(self.uncert_plots), key="uncert")
-            st.image(self.uncert_plots[uncert_iter-1], width=500)
+            st.write("")  # blank line to align the plots
+            st.image(self.uncert_plots[self.cur_iter], width=500)
 
-    def load_model_plots(self):
+    def next_iter(self):
         """
-        Finds and sorts all model graphs, then returns them as PIL images.
+        Move to the next iteration.
         """
-        basedir = Path.cwd() / "postprocessing/graphs_models"
-        # The number following npts is captured in a group (\d+) for sorting later.
-        rgx = re.compile(r"\w+npts(\d+).png")
-        uncert_rgx = re.compile(r"\w+npts(\d+)+_uncert.png")
+        self.cur_iter += 1
 
-        # Find model plots
-        model_matches = [re.search(rgx, str(f)) for f in basedir.iterdir()]
-        model_matches = [m for m in model_matches if m]  # remove null matches
-        model_matches.sort(key=lambda m: int(m.group(1)))
-        model_paths = [basedir / m.group(0) for m in model_matches]
-        # Load images and display initial image
-        self.model_plots = [Image.open(path) for path in model_paths]
-        st.select_slider(label="Select an iteration",
-                         options=self.model_plots,)
+    def display_model_and_uncertainty(self) -> None:
+        pp_dir = "./postprocessing/graphs_models"
+        if st.button(label="Next iteration", on_click=self.next_iter, key="show_next"):
+            st.write("cur_iter: ", self.cur_iter)
+        self._show_plots(
+            path=pp_dir,
+            title="Select an iteration to display the model and uncertainty plots.",
+            warning="No model plots to display. Make sure that you have chosen to plot something.",
+        )
 
-
+    # TODO: implement this to display convergence and hyperparams plot
+    def conv_hyperparams_plots(self) -> None:
+        """
+        Display plots of the convergence measures and hyperparameters.
+        """
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image("./postprocessing/graphs_convergence/convergence.png", width=500)
+        with col2:
+            st.image("./postprocessing/graphs_convergence/hyperparameters.png", width=500)
+        pass
