@@ -26,7 +26,6 @@ if st.session_state["bo_run"] is None:
 # Initialize a session state for RunHelper if there isn't one
 bo_run: RunBOSS = st.session_state["bo_run"]
 
-
 if st.button("Restart", help="Clear all data of the current run and start over.", type="primary"):
     setup.clear_data()
 
@@ -37,10 +36,10 @@ setup_tab, run_tab, postprocess_tab = st.tabs(
 
 with setup_tab:
     st.write("#### Set up input data and parameters for BOSS here.")
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2, 1])
     with col1:
         choice = st.selectbox(
-            "First of all, do you want to upload a csv file, or create initial data points?",
+            "Do you want to upload a csv file, or create initial data points?",
             options=("Upload file", "Create data points"),
             help="If you don't have any data, select 'Create data points'. Otherwise, select 'Upload file'.",
             index=None,
@@ -142,14 +141,13 @@ with run_tab:
                 st.error("Please make sure that all data points are of valid format. "
                          "Fill in the empty cells or download the data if you want to continue later.")
 
-
 with postprocess_tab:
     st.write("#### Plot the results of the optimization.")
     if bo_run.results is not None:
         bo_run.display_result()
         pp = PostprocessingTab(bo_run.results, bo_run.X_names)
         pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
-        if st.button("Run post-processing"):
+        if st.button("Run post-processing", type="primary"):
             post = PPMain(
                 bo_run.results,
                 pp_models=True,
@@ -157,11 +155,28 @@ with postprocess_tab:
                 pp_model_slice=pp_slice,
             )
             post.run()
-
+        # Display the current plots
         if pp.model_plots is not None:
             pp.display_model_and_uncertainty()
-            # pp.display_acqfns()
+
+        # Buttons for navigation
+        col1, col2, col3 = st.columns([1, 2, 1], gap="large")
+        with col1:
+            if st.button("Previous"):
+                pp.prev_image()
+        with col3:
+            if st.button("Next"):
+                pp.next_image()
+        # Slider
+        st.session_state.cur_iter = st.slider(label="Select iteration",
+                                              min_value=0,
+                                              max_value=len(pp.model_plots) - 1,
+                                              key="iter",
+                                              value=st.session_state.cur_iter,
+                                              )
+        st.write("test current iter: ", st.session_state["cur_iter"])
     else:
+
         st.warning(
             "⚠️ No optimization results available. Please set up in 'Set up BOSS' tab and run in 'Run BOSS' tab."
         )

@@ -11,8 +11,9 @@ class PostprocessingTab:
         self.expander = None
         self.model_plots = []
         self.uncert_plots = []
-        self.cur_iter = 0
+        # self.cur_iter = 0  # counter for the current iteration
 
+    # TODO: ensure that this function works with num_iters
     def input_pp_iters(self):
         pp_iters = st.multiselect(
             "Which iterations to run post-processing?",
@@ -23,12 +24,17 @@ class PostprocessingTab:
         return pp_iters
 
     def plot_acqfn_or_slice(self):
-        # By default, when this checkbox first renders, it is selected.
-        plot_acqfns = st.checkbox(
-            "Plot the acquisition functions in first and second axes. "
-            "If not selected, you can customize which axes to plot.",
-            value=True,
-        )
+        """
+        Return a tuple of plot_acqfns and model_slice
+        """
+        col1, col2, col3 = st.columns([1, 2, 1], gap="large")
+        with col1:
+            # By default, when this checkbox first renders, it is selected.
+            plot_acqfns = st.selectbox(
+                label="Plot the function in the first and second axes?",
+                options=(True, False),
+                help="If you select 'No', you can manually set which axes to plot.",
+            )
         model_slice = [1, 2, 50]  # x axis, y axis, number of points per axis
         if not plot_acqfns and self.x_names is not None:
             x, y, z = self.input_model_slice()
@@ -37,9 +43,13 @@ class PostprocessingTab:
             model_slice[2] = z
         return plot_acqfns, model_slice
 
-    # TODO: refactor for the new postprocessing structure
-    def input_model_slice(self) -> (int, int, int):
-        # pp_models_slice = [x,y,z]
+    # TODO: if needed, refactor for the new postprocessing structure. try passing the tuple to pp_model_slice.
+    def input_model_slice(self) -> tuple[int, int, int]:
+        """
+        Returns which (max 2D) cross-section of the objective function domain to use in output and plots. First two
+        integers define the cross-section and last determines how many points per edge in the dumped grid.
+        """
+        # pp_models_slice = [x,y,z]  # keyword in BOSS post-processing
         # x and y define the cross-section and z is grid
         st.write("Which cross-section (max 2D) of the objective function to plot?")
         col1, col2, col3 = st.columns(3)
@@ -53,31 +63,22 @@ class PostprocessingTab:
             )
         return x, y, z
 
-    # TODO: check if refactor is needed
-    def display_acqfns(self) -> None:
-        path = "./postprocessing/graphs_models"
-        self._show_plots(
-            path, "Acquisition function", "No other plots for acquisition functions."
-        )
-
     # TODO: refactor this to display model plots of n-interations and make it cleaner
-    def _show_plots(self, path, title, warning) -> None:  # obj_1, obj_2, slider
+    def _show_plots(self, path, warning: str = None) -> None:
         """
-        Internal function to display plots.
+        Internal function used to display plots.
 
         :param path: str
             The path of the plots.
-        :param title: str
-            The title of the plots.
         :param warning: str
             The warning text if no plots are found.
         """
         col1, col2 = st.columns(2)
         if os.path.isdir(path):
-            # self.expander = st.expander(title, expanded=True)
             for path, directories, files in os.walk(path):
                 for i, file in enumerate(files):
                     img_path = os.path.join(path, file)
+                    # Load image from path and append to list of either model or uncertainty plots
                     img = Image.open(img_path)
                     if "uncert" not in img_path:
                         self.model_plots.append(img)
@@ -85,29 +86,23 @@ class PostprocessingTab:
                         self.uncert_plots.append(img)
         else:
             st.warning(warning)
-
-        self.cur_iter = st.slider(label="Next iteration", min_value=0, max_value=len(self.model_plots) - 1, key="iter")
+        # Display one model plot on the left and one uncertainty plot on the right
         with col1:
-            st.image(self.model_plots[self.cur_iter], width=500)
+            st.image(self.model_plots[st.session_state.cur_iter], width=500)
         with col2:
-            st.write("")  # blank line to align the plots
-            st.image(self.uncert_plots[self.cur_iter], width=500)
+            st.write("")  # temp fix: add a blank line to align 2 plots horizontally
+            st.image(self.uncert_plots[st.session_state.cur_iter], width=500)
 
-    def next_iter(self):
-        """
-        Move to the next iteration.
-        """
-        self.cur_iter += 1
+    def next_image(self):
+        if st.session_state.cur_iter < len(self.model_plots) - 1:
+            st.session_state.cur_iter += 1
+
+    def prev_image(self):
+        if st.session_state.cur_iter > 0:
+            st.session_state.cur_iter -= 1
 
     def display_model_and_uncertainty(self) -> None:
-        pp_dir = "./postprocessing/graphs_models"
-        if st.button(label="Next iteration", on_click=self.next_iter, key="show_next"):
-            st.write("cur_iter: ", self.cur_iter)
-        self._show_plots(
-            path=pp_dir,
-            title="Select an iteration to display the model and uncertainty plots.",
-            warning="No model plots to display. Make sure that you have chosen to plot something.",
-        )
+        self._show_plots(path="./postprocessing/graphs_models", warning=None)
 
     # TODO: implement this to display convergence and hyperparams plot
     def conv_hyperparams_plots(self) -> None:

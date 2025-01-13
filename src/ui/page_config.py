@@ -79,8 +79,10 @@ class PageConfig:
 
     @staticmethod
     def init_states() -> None:
+        # session state to clear all data of the current run if restart button is clicked
         if "input_key" not in st.session_state:
             st.session_state.input_key = 0
+
         if "bo_run" not in st.session_state:
             st.session_state["bo_run"] = None
 
@@ -88,6 +90,10 @@ class PageConfig:
         if "init_vars" not in st.session_state:
             st.session_state["init_vars"] = None
 
-        # dataframe of initial points
+        # Session state to track dataframe containing initial points
         if "init_pts" not in st.session_state:
             st.session_state["init_pts"] = None
+
+        # Session state to track the current image index to display in tab post-processing
+        if "cur_iter" not in st.session_state:
+            st.session_state.cur_iter = 0
