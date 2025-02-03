@@ -9,33 +9,31 @@ class PostprocessingTab:
         self.bo_results = bo_results
         self.x_names = x_names
         self.expander = None
-
-    def input_pp_iters(self):
-        pp_iters = st.multiselect(
-            "Which iterations to run post-processing?",
-            help="Can't be chosen if there is no iteration.",
-            options=np.arange(0, np.arange(0, self.bo_results.num_iters)),
-            default=None,
-        )
-        return pp_iters
+        self.model_plots = []
+        self.uncert_plots = []
+        self.pp_acq_funcs = True
 
     def plot_acqfn_or_slice(self):
-        # By default, when this checkbox first renders, it is selected.
-        plot_acqfns = st.checkbox(
-            "Plot the acquisition functions in first and second axes. "
-            "If not selected, you can customize which axes to plot.",
-            value=True,
-        )
-        model_slice = [1, 2, 50]
-        if not plot_acqfns and self.x_names is not None:
+        """
+        Return a tuple of plot_acqfns and model_slice.
+        pp_acq_funcs will be given as keywrord in BOSS PPMain().
+        It tells to output and plot acquisition functions or slices of them in a grid according to pp_model_slice.
+        """
+        model_slice = [1, 2, 50]  # x axis, y axis, number of points per axis
+        if not self.pp_acq_funcs and self.x_names is not None:
             x, y, z = self.input_model_slice()
             model_slice[0] = self.x_names.index(x) + 1
             model_slice[1] = self.x_names.index(y) + 1
             model_slice[2] = z
-        return plot_acqfns, model_slice
+        return model_slice
 
-    def input_model_slice(self) -> (int, int, int):
-        # pp_models_slice = [x,y,z]
+    # TODO: if needed, refactor for the new postprocessing structure. try passing the tuple to pp_model_slice.
+    def input_model_slice(self) -> tuple[int, int, int]:
+        """
+        Returns which (max 2D) cross-section of the objective function domain to use in output and plots. First two
+        integers define the cross-section and last determines how many points per edge in the dumped grid.
+        """
+        # pp_models_slice = [x,y,z]  # keyword in BOSS post-processing
         # x and y define the cross-section and z is grid
         st.write("Which cross-section (max 2D) of the objective function to plot?")
         col1, col2, col3 = st.columns(3)
@@ -45,42 +43,67 @@ class PostprocessingTab:
             y = st.selectbox("Second axis of cross-section", options=self.x_names)
         with col3:
             z = st.number_input(
-                "Number of points per edge in the grid", value=50, step=1, min_value=1
+                "Number of points per axis in the grid", value=50, step=1, min_value=1
             )
         return x, y, z
 
-    def display_model_and_uncertainty(self) -> None:
-        pp_dir = "./postprocessing/graphs_models"
-        self._show_plots(
-            pp_dir,
-            "Model plots",
-            "No model plots to display. Make sure that you have chosen to plot something.",
-        )
+    # TODO: refactor this to display model plots of n-interations and make it cleaner
+    def _show_plots(self, path, warning: str = None) -> None:
+        """
+        Internal function used to display plots.
 
-    def display_acqfns(self) -> None:
-        path = "./postprocessing/graphs_acqfns"
-        self._show_plots(
-            path, "Acquisition function", "No other plots for acquisition functions."
-        )
-
-    def _show_plots(self, path, title, warning_text) -> None:
+        :param path: str
+            The path of the plots.
+        :param warning: str
+            The warning text if no plots are found.
+        """
         if os.path.isdir(path):
-            self.expander = st.expander(title, expanded=True)
             for path, directories, files in os.walk(path):
-                columns = self.expander.columns(2, gap="medium")
                 for i, file in enumerate(files):
-                    if file.endswith(("png", "jpg")):
-                        with columns[i]:
-                            img_path = os.path.join(path, file)
-                            img = Image.open(img_path)
-                            if "uncert" in img_path:
-                                st.image(
-                                    img, caption="Uncertainty over the search space"
-                                )
-                            else:
-                                st.image(
-                                    img,
-                                    caption="Acquisitions, next acquisition, and global minimum",
-                                )
+                    img_path = os.path.join(path, file)
+                    # Load image from path and append to list of either model or uncertainty plots
+                    img = Image.open(img_path)
+                    if "uncert" not in img_path:
+                        self.model_plots.append(img)
+                    else:
+                        self.uncert_plots.append(img)
         else:
-            st.warning(warning_text)
+            st.warning(warning)
+
+    def next_image(self):
+        """
+        Move to the next image.
+        """
+        if st.session_state.cur_iter < len(self.model_plots) - 1:
+            st.session_state.cur_iter += 1
+
+    def prev_image(self):
+        if st.session_state.cur_iter > 0:
+            st.session_state.cur_iter -= 1
+
+    def load_plots(self) -> None:
+        model_dir = "./postprocessing/graphs_models"
+        if os.path.isdir(model_dir):
+            self._show_plots(path=model_dir, warning=None)
+
+    # TODO: implement this to display convergence and hyperparams plots
+    def conv_hyperparams_plots(self) -> None:
+        """
+        Display plots of the convergence measures and hyperparameters.
+        """
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image("./postprocessing/graphs_convergence/convergence.png", width=500)
+        with col2:
+            st.image("./postprocessing/graphs_convergence/hyperparameters.png", width=500)
+        pass
+
+    # TODO: ensure that this function works with num_iters
+    def input_pp_iters(self):
+        pp_iters = st.multiselect(
+            "Which iterations to run post-processing?",
+            help="Can't be chosen if there is no iteration.",
+            options=np.arange(0, np.arange(0, self.bo_results.num_iters)),
+            default=None,
+        )
+        return pp_iters
