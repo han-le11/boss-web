@@ -146,35 +146,47 @@ with postprocess_tab:
     if bo_run.results is not None:
         bo_run.display_result()
         pp = PostprocessingTab(bo_run.results, bo_run.X_names)
-        pp_acq_funcs, pp_slice = pp.plot_acqfn_or_slice()
+        pp_slice = pp.plot_acqfn_or_slice()
         if st.button("Run post-processing", type="primary"):
             post = PPMain(
                 bo_run.results,
                 pp_models=True,
-                pp_acq_funcs=pp_acq_funcs,
                 pp_model_slice=pp_slice,
             )
             post.run()
-        # Display the current plots
-        if pp.model_plots is not None:
-            pp.display_model_and_uncertainty()
 
-        # Buttons for navigation
-        col1, col2, col3 = st.columns([1, 2, 1], gap="large")
-        with col1:
-            if st.button("Previous"):
-                pp.prev_image()
-        with col3:
-            if st.button("Next"):
-                pp.next_image()
-        # Slider
-        st.session_state.cur_iter = st.slider(label="Select iteration",
-                                              min_value=0,
-                                              max_value=len(pp.model_plots) - 1,
-                                              key="iter",
-                                              value=st.session_state.cur_iter,
-                                              )
-        st.write("test current iter: ", st.session_state["cur_iter"])
+        # Load images of models and uncertainty
+        pp.load_plots()
+
+        if len(pp.model_plots) > 1:
+            col1, col2, col3 = st.columns([1, 2, 1], gap="large")
+            with col1:
+                if st.button("Previous"):
+                    pp.prev_image()
+            with col3:
+                if st.button("Next"):
+                    pp.next_image()
+
+        img1, img2 = st.columns(2)
+        # Display one model plot on the left and one uncertainty plot on the right
+        with img1:
+            st.image(pp.model_plots[st.session_state.cur_iter], width=500)
+        with img2:
+            st.write("")  # temp fix: add a blank line to align 2 plots horizontally
+            st.image(pp.uncert_plots[st.session_state.cur_iter], width=500)
+        st.write("test index before slider: ", st.session_state["cur_iter"])
+
+        # TODO: only display buttons and sliders if there's more than 1 iteration?
+        if len(pp.model_plots) > 1:
+            # Slider
+            st.session_state.cur_iter = st.slider(label="Select iteration",
+                                                  min_value=0,
+                                                  max_value=len(pp.model_plots) - 1,
+                                                  key="iter",
+                                                  value=st.session_state.cur_iter,
+                                                  )
+        st.write("test index after slider: ", st.session_state["cur_iter"])
+
     else:
 
         st.warning(
