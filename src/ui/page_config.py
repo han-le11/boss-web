@@ -94,6 +94,7 @@ class PageConfig:
         if "init_pts" not in st.session_state:
             st.session_state["init_pts"] = None
 
-        # Session state to track the current image index to display in tab post-processing
+        # Session state to track the current iter index to display in tab post-processing.
+        # For cur_iter, min value is 0, max value is number of iterations - 1.
         if "cur_iter" not in st.session_state:
             st.session_state.cur_iter = 0
