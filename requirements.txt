@@ -12,7 +12,7 @@ packaging==23.0
 pandas==2.2.2
 paramz>=0.9.6
 Pillow~=9.5.0
-scipy==1.10.1
+
 streamlit~=1.37.0
 toml==0.10.2
 tomli-w>=1.2.0
