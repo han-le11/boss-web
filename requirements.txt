@@ -1,10 +1,6 @@
 aalto-boss==1.9.1
 attrs==22.2.0
 cachetools==5.3.0
-Cython==0.29.34
-decorator==5.1.1
-fonttools==4.39.3
-gitdb==4.0.10
 GitPython==3.1.31
 importlib-metadata==6.3.0
 Jinja2==3.1.2
@@ -17,10 +13,6 @@ pandas==2.2.2
 paramz>=0.9.6
 Pillow~=9.5.0
 pyrsistent==0.19.3
-python-dateutil==2.8.2
-pytz==2023.3
-pytz-deprecation-shim==0.1.0.post0
-requests==2.28.2
 scipy==1.10.1
 streamlit~=1.37.0
 toml==0.10.2
