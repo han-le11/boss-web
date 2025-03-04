@@ -1,4 +1,5 @@
 import streamlit as st
+import sys
 
 
 def customize_footer() -> None:
@@ -73,15 +74,27 @@ class PageConfig:
                     </style>
                     """
         st.markdown(set_width, unsafe_allow_html=True)
-
-    def set_main_title(self) -> None:
-        """
-        Set main title in the main area, at the center of a page.
-        """
         st.title(self.main_title)
-
-    def set_header(self) -> None:
-        """
-        Set header for a page, which appears in the sidebar.
-        """
         st.sidebar.header(self.header)
+
+    @staticmethod
+    def init_states() -> None:
+        # session state to clear all data of the current run if restart button is clicked
+        if "input_key" not in st.session_state:
+            st.session_state.input_key = 0
+
+        if "bo_run" not in st.session_state:
+            st.session_state["bo_run"] = None
+
+        # dictionary of variable names (key) and bounds (value)
+        if "init_vars" not in st.session_state:
+            st.session_state["init_vars"] = None
+
+        # Session state to track dataframe containing initial points
+        if "init_pts" not in st.session_state:
+            st.session_state["init_pts"] = None
+
+        # Session state to track the current iter index to display in tab post-processing.
+        # For cur_iter, min value is 0, max value is number of iterations - 1.
+        if "cur_iter" not in st.session_state:
+            st.session_state.cur_iter = 0
