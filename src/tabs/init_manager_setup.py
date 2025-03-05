@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from boss.bo.initmanager import InitManager
+from pandas import DataFrame
 
 
-class InitPointsSetUp:
+class InitManagerSetUp:
     """
     Class for setting up initial data points.
     Not to be confused with InitManager from BOSS, which is used to generate initial data points.
@@ -12,11 +13,10 @@ class InitPointsSetUp:
     def __init__(self):
         self.dim = None
         self.min = True
-        self.X_names = []
-        self.Y_names = []
-        self.data = None
-        self.bounds = None
+        self.init_type = "sobol"
         self.num_init = 0  # number of generated initial points
+        # self.X_names = []
+        # self.Y_names = []
 
     def set_init_widgets(self):
         st.markdown(
@@ -44,14 +44,13 @@ class InitPointsSetUp:
                 help="The number of initial data points to create",
             )
         with right:
-            init_type = st.selectbox(
+            self.init_type = st.selectbox(
                 "Select the type of initial points",
                 options=("sobol", "random", "grid"),
                 help="Select method for creating the initial sampling locations",
             )
-        return init_type
 
-    def set_init_manager(self, init_type: str, bounds) -> InitManager:
+    def set_init_manager(self, init_type: str, bounds) -> InitManager | None:
         """
         Return an InitManager instance of the InitManager class (from BOSS library).
 
@@ -102,7 +101,6 @@ class InitPointsSetUp:
         :return df: pd.DataFrame
             A dataframe containing initial points and an empty column for recording the target variable.
         """
-        # if len(list(st.session_state["init_vars"].keys())) == self.dim + 1:
         try:
             var_names = list(names_and_bounds.keys())
             empty_y_vals_col = np.ones(shape=(init_arr.shape[0], 1)) * np.nan
@@ -114,7 +112,7 @@ class InitPointsSetUp:
             raise ValueError("⚠️ Please give a distinct name for each variable.")
 
     @staticmethod
-    def add_bounds_to_dataframe(df, names_and_bounds) -> pd.DataFrame:
+    def add_bounds_to_dataframe(df, names_and_bounds) -> DataFrame | None:
         """
         This dataframe is not shown to the user. It's only used to concatenate the
         input bounds to the dataframe of generated initial points.
