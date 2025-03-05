@@ -3,7 +3,7 @@
 ## Overview 
 Prototype development of a multipage web app for Bayesian Optimization Structure Search (BOSS), a general-purpose Bayesian Optimization code. It is designed to facilitate machine learning in computational and experimental natural sciences.
 
-Demo version of the web app is available [here](https://boss-demo.streamlit.app/). Please note that this version is for demo purposes only and is *not* intended for production use.
+Demo version of the web app is available [here](https://boss-demo.streamlit.app/). Please note that this version is a work in progress and for demo purposes only—it is *not* for production use.
 
 Code documentation of BOSS as Python API can be found [here](https://cest-group.gitlab.io/boss/).
 
@@ -58,6 +58,10 @@ $ (env) pip install -r requirements.txt
 ```
 $ (env) streamlit run src/home.py
 ```
+
+## Known Issues
+- **Database**: Database connection is not yet implemented in the demo version
+- **Result files**: The result files obtained after running one iteration needs to be downloadable. 
 
 
 
