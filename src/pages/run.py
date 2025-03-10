@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import streamlit as st
 from boss.pp.pp_main import PPMain
 from tabs.init_manager_tab import InitManagerTab, set_names_bounds
@@ -37,6 +38,7 @@ init_data_tab, run_tab, postprocess_tab = st.tabs(
 )
 
 with init_data_tab:
+    st.write("current dir: ", os.getcwd())
     init = InitManagerTab()
     init_type, initpts = init.set_page()
     init_bounds = set_names_bounds(init.dim)
