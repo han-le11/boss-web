@@ -1,10 +1,11 @@
 import numpy as np
+import os
 import pandas as pd
 import streamlit as st
 import tomli
+import shutil
 from io import StringIO
 from pandas.errors import ParserError
-from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
 def reset():
@@ -17,6 +18,11 @@ def reset():
     st.session_state["init_names_and_bounds"] = None
     st.session_state["init_pts"] = None
 
+    # clear local postprocessing directory
+    postprocessing_dir = "./postprocessing"
+    if os.path.isdir(postprocessing_dir):
+        shutil.rmtree(postprocessing_dir)
+        os.mkdir(postprocessing_dir)
 
 class SetUp:
     """
@@ -35,7 +41,7 @@ class SetUp:
         Return an array of input bounds and a dictionary of variable names and corresponding bounds.
 
         :param dimension: int
-            dimension of the search space of input variables.
+            Dimension of the search space of input variables.
 
         :return:
         bounds: ndarray
@@ -86,7 +92,7 @@ class SetUp:
         """
         Widget to upload a file, which is read into a dataframe. Check if metadata exists.
 
-        return:
+        :return:
         pd.DataFrame
             The dataframe of data, without metadata.
         """

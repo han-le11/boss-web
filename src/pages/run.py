@@ -1,7 +1,7 @@
 import numpy as np
 import streamlit as st
 from boss.pp.pp_main import PPMain
-from tabs.init_manager import InitPointsSetUp
+from tabs.init_manager_setup import InitManagerSetUp
 from tabs.postprocessing_tab import PostprocessingTab
 from tabs.run_boss import RunBOSS
 from tabs.setup import SetUp
@@ -47,8 +47,8 @@ with setup_tab:
         )
     match choice:
         case "Create data points":
-            init = InitPointsSetUp()
-            init_type = init.set_init_widgets()
+            init = InitManagerSetUp()
+            init.set_init_widgets()
             bo_run.bounds = setup.set_init_bounds(init.dim)
             bo_run.dim = init.dim
             bo_run.num_init = init.num_init
@@ -56,7 +56,6 @@ with setup_tab:
 
             if st.button("Generate points") and bo_run.verify_bounds(bo_run.bounds):
                 init_manager = init.set_init_manager(
-                    init_type,
                     bo_run.bounds,
                 )
                 init_pts = init_manager.get_all()
@@ -145,50 +144,54 @@ with postprocess_tab:
     st.write("#### Plot the results of the optimization.")
     if bo_run.results is not None:
         bo_run.display_result()
-        pp = PostprocessingTab(bo_run.results, bo_run.X_names)
-        pp_slice = pp.plot_acqfn_or_slice()
+        res = PostprocessingTab(bo_run.results, bo_run.X_names)
+        res.set_model_slice()
         if st.button("Run post-processing", type="primary"):
-            post = PPMain(
+            # Use Postprocessing of BOSS
+            pp = PPMain(
                 bo_run.results,
                 pp_models=True,
-                pp_model_slice=pp_slice,
+                pp_model_slice=res.model_slice,
             )
-            post.run()
+            pp.run()
 
         # Load images of models and uncertainty
-        pp.load_plots()
+        res.load_plots()
 
-        if len(pp.model_plots) > 1:
+        if len(res.model_plots) >= 1:
             col1, col2, col3 = st.columns([1, 2, 1], gap="large")
             with col1:
                 if st.button("Previous"):
-                    pp.prev_image()
+                    res.prev_image()
             with col3:
                 if st.button("Next"):
-                    pp.next_image()
+                    res.next_image()
 
-        img1, img2 = st.columns(2)
-        # Display one model plot on the left and one uncertainty plot on the right
-        with img1:
-            st.image(pp.model_plots[st.session_state.cur_iter], width=500)
-        with img2:
-            st.write("")  # temp fix: add a blank line to align 2 plots horizontally
-            st.image(pp.uncert_plots[st.session_state.cur_iter], width=500)
-        st.write("test index before slider: ", st.session_state["cur_iter"])
+            if 0 <= st.session_state.cur_iter < len(res.model_plots):
+                img1, img2 = st.columns(2)
+                # Display one model plot on the left and one uncertainty plot on the right
+                # with img1:
+                st.image(res.model_plots[st.session_state.cur_iter], width=500)
+                # with img2:
+                st.write("")  # temp fix: add a blank line to align 2 plots horizontally
+                st.image(res.uncert_plots[st.session_state.cur_iter], width=500)
+            st.write("test index before slider: ", st.session_state["cur_iter"])
 
-        # TODO: only display buttons and sliders if there's more than 1 iteration?
-        if len(pp.model_plots) > 1:
-            # Slider
-            st.session_state.cur_iter = st.slider(label="Select iteration",
-                                                  min_value=0,
-                                                  max_value=len(pp.model_plots) - 1,
-                                                  key="iter",
-                                                  value=st.session_state.cur_iter,
-                                                  )
-        st.write("test index after slider: ", st.session_state["cur_iter"])
+            # Only display buttons and sliders if there's more than 1 iteration
+            if len(res.model_plots) > 1:
+                # Slider value to a variable slider_value
+                slider_value = st.slider(label="Select iteration",
+                                         min_value=0,
+                                         max_value=len(res.model_plots) - 1,
+                                         key="iter",
+                                         value=st.session_state.cur_iter,
+                                         )
+                # only change the slider value if it's different
+                if slider_value != st.session_state.cur_iter:
+                    st.session_state.cur_iter = slider_value
+            st.write("test index after slider: ", st.session_state["cur_iter"])
 
     else:
-
         st.warning(
             "⚠️ No optimization results available. Please set up in 'Set up BOSS' tab and run in 'Run BOSS' tab."
         )

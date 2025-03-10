@@ -104,12 +104,13 @@ class RunBOSS:
 
         :return: None
         """
-        self.num_init = metadata.get('num-init')
+        self.num_init = metadata.get('num_init')
         self.noise = metadata.get('noise', 0)
         self.min = metadata.get('min', True)
         self.data.columns = [c.strip().replace(" ", "") for c in self.data.columns]
         # Input vars are the ones that have bounds in the metadata
         self.X_names = [c for c in self.data.columns if c in metadata.keys()]
+
         # Output vars are the ones that do not have bounds in the metadata, as their [min, max] is used as default
         self.Y_names = [c for c in self.data.columns if c not in metadata.keys()]
         self.bounds = np.array([metadata.get(x, None) for x in self.X_names])
@@ -314,10 +315,11 @@ class RunBOSS:
         metadata = {
             'noise': self.noise,
             'min': self.min,
-            'num-init': self.num_init,
+            'num_init': self.num_init,
         }
         for d in range(0, self.dim):
             metadata[self.X_names[d]] = str(self.bounds[d].tolist())
+        print(metadata)
         metadata_str = tomli_w.dumps(metadata)
 
         # remove double quotes

@@ -20,7 +20,7 @@ class TestSetInitManager(unittest.TestCase):
 
     def test_set_init_manager(self):
         bounds = np.array([[0, 1], [0, 1]])
-        init_manager = self.init.set_init_manager(bounds)
+        init_manager = self.init.set_init_manager(bounds=bounds)
         self.assertIsInstance(init_manager, InitManager)
 
     def test_set_init_manager_with_none_bounds(self):

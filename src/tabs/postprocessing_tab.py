@@ -9,43 +9,33 @@ class PostprocessingTab:
         self.bo_results = bo_results
         self.x_names = x_names
         self.expander = None
-        self.model_plots = []
-        self.uncert_plots = []
-        self.pp_acq_funcs = True
+        self.model_plots: list[Image] = []
+        self.uncert_plots: list[Image] = []
+        self.model_slice = [None, None, None]
 
-    def plot_acqfn_or_slice(self):
+    # TODO: write unit test
+    def set_model_slice(self) -> None:
         """
-        Return a tuple of plot_acqfns and model_slice.
-        pp_acq_funcs will be given as keywrord in BOSS PPMain().
-        It tells to output and plot acquisition functions or slices of them in a grid according to pp_model_slice.
+        Let users choose axes for the 2d cross-section to plot, how many points per edge in the plot grid.
+        This setting is passed to use in output and plots.
         """
-        model_slice = [1, 2, 50]  # x axis, y axis, number of points per axis
-        if not self.pp_acq_funcs and self.x_names is not None:
-            x, y, z = self.input_model_slice()
-            model_slice[0] = self.x_names.index(x) + 1
-            model_slice[1] = self.x_names.index(y) + 1
-            model_slice[2] = z
-        return model_slice
-
-    # TODO: if needed, refactor for the new postprocessing structure. try passing the tuple to pp_model_slice.
-    def input_model_slice(self) -> tuple[int, int, int]:
-        """
-        Returns which (max 2D) cross-section of the objective function domain to use in output and plots. First two
-        integers define the cross-section and last determines how many points per edge in the dumped grid.
-        """
-        # pp_models_slice = [x,y,z]  # keyword in BOSS post-processing
-        # x and y define the cross-section and z is grid
-        st.write("Which cross-section (max 2D) of the objective function to plot?")
+        # x and y define the cross-section and z is number of points per axis
+        st.write("Which axes (max 2D) of the objective function to plot?")
         col1, col2, col3 = st.columns(3)
         with col1:
-            x = st.selectbox("First axis of cross-section", options=self.x_names)
+            x1: str = st.selectbox("X1-axis", options=self.x_names)
         with col2:
-            y = st.selectbox("Second axis of cross-section", options=self.x_names)
+            x2: str = st.selectbox("X2-axis", options=self.x_names, index=1)
+
         with col3:
-            z = st.number_input(
+            self.model_slice[2] = st.number_input(
                 "Number of points per axis in the grid", value=50, step=1, min_value=1
             )
-        return x, y, z
+        # Access index of x1 and x2 in x_names
+        self.model_slice[0] = self.x_names.index(x1) + 1
+        self.model_slice[1] = self.x_names.index(x2) + 1
+        if self.model_slice[0] == self.model_slice[1]:
+            st.warning("Please select different axes to display contour plots.")
 
     # TODO: refactor this to display model plots of n-interations and make it cleaner
     def _show_plots(self, path, warning: str = None) -> None:
@@ -77,7 +67,8 @@ class PostprocessingTab:
         if st.session_state.cur_iter < len(self.model_plots) - 1:
             st.session_state.cur_iter += 1
 
-    def prev_image(self):
+    @staticmethod
+    def prev_image():
         if st.session_state.cur_iter > 0:
             st.session_state.cur_iter -= 1
 
