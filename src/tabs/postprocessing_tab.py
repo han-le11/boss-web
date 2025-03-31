@@ -12,6 +12,7 @@ class PostprocessingTab:
         self.model_plots: list[Image] = []
         self.uncert_plots: list[Image] = []
         self.model_slice = [None, None, None]
+        self.slider_value = st.session_state.cur_iter
 
     # TODO: write unit test
     def set_model_slice(self) -> None:
@@ -26,7 +27,6 @@ class PostprocessingTab:
             x1: str = st.selectbox("X1-axis", options=self.x_names)
         with col2:
             x2: str = st.selectbox("X2-axis", options=self.x_names, index=1)
-
         with col3:
             self.model_slice[2] = st.number_input(
                 "Number of points per axis in the grid", value=50, step=1, min_value=1
@@ -76,6 +76,10 @@ class PostprocessingTab:
         model_dir = "./postprocessing/graphs_models"
         if os.path.isdir(model_dir):
             self._show_plots(path=model_dir, warning=None)
+
+    def update_slider_value(self):
+        st.session_state.cur_iter = self.slider_value
+        st.rerun()
 
     # TODO: implement this to display convergence and hyperparams plots
     def conv_hyperparams_plots(self) -> None:

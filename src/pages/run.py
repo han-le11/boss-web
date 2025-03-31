@@ -78,11 +78,6 @@ with setup_tab:
                 bo_run.data = st.data_editor(st.session_state["init_pts"])
                 bo_run.add_metadata()
                 bo_run.download_data(widget_key="init_points")
-                # df with bounds, only seen when downloaded, not shown in UI
-                # bo_run.data = init.add_bounds_to_dataframe(
-                #     bo_run.data, st.session_state["init_vars"]
-                # )
-                # init.download_init_points(bo_run.data)
 
         case "Upload file":
             # If BOSS hasn't been run, display widget to upload file.
@@ -170,26 +165,23 @@ with postprocess_tab:
             if 0 <= st.session_state.cur_iter < len(res.model_plots):
                 img1, img2 = st.columns(2)
                 # Display one model plot on the left and one uncertainty plot on the right
-                # with img1:
-                st.image(res.model_plots[st.session_state.cur_iter], width=500)
-                # with img2:
-                st.write("")  # temp fix: add a blank line to align 2 plots horizontally
-                st.image(res.uncert_plots[st.session_state.cur_iter], width=500)
-            st.write("test index before slider: ", st.session_state["cur_iter"])
+                with img1:
+                    st.image(res.model_plots[st.session_state.cur_iter], width=500)
+                with img2:
+                    st.write("")  # temp fix: add a blank line to align 2 plots horizontally
+                    st.image(res.uncert_plots[st.session_state.cur_iter], width=500)
 
             # Only display buttons and sliders if there's more than 1 iteration
             if len(res.model_plots) > 1:
                 # Slider value to a variable slider_value
-                slider_value = st.slider(label="Select iteration",
+                res.slider_value = st.slider(label="Select iteration",
                                          min_value=0,
                                          max_value=len(res.model_plots) - 1,
                                          key="iter",
                                          value=st.session_state.cur_iter,
                                          )
-                # only change the slider value if it's different
-                if slider_value != st.session_state.cur_iter:
-                    st.session_state.cur_iter = slider_value
-            st.write("test index after slider: ", st.session_state["cur_iter"])
+                if res.slider_value != st.session_state.cur_iter:
+                    res.update_slider_value()
 
     else:
         st.warning(
