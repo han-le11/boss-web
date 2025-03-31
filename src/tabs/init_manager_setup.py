@@ -15,8 +15,6 @@ class InitManagerSetUp:
         self.min = True
         self.init_type = "sobol"
         self.num_init = 0  # number of generated initial points
-        # self.X_names = []
-        # self.Y_names = []
 
     def set_init_widgets(self):
         st.markdown(

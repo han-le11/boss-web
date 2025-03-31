@@ -110,11 +110,13 @@ class SetUp:
                 # convert to str to look for metadata
                 stringio = StringIO(self.file.getvalue().decode("utf-8"))
                 lines = stringio.read().split("\n")
-                # remove hash and empty last line if it exists
+                # remove hashtag characters and empty last line if it exists
                 if lines[-1] == "":
                     lines = lines[:-1]
-                metadata = [l[1:] for l in lines if l[0] == "#"]
-                self.metadata = tomli.loads("\n".join(metadata))
+                metadata_str = [l[1:] for l in lines if l[0] == "#"]
+                # parse metadata
+                self.metadata: dict = tomli.loads("\n".join(metadata_str))
+
                 if self.metadata:
                     self.has_metadata = True
                 return pd.read_csv(self.file, sep=";|,", comment="#")  # ignore comments for hyperparams and metadata
