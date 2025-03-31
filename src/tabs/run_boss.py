@@ -59,15 +59,6 @@ class RunBOSS:
         """
         return self.data[self.Y_names].to_numpy()
 
-    def strip_white_spaces(self) -> None:
-        """
-        Remove leading, trailing, and in-between whitespace in variable names (X_name and Y_name) if there is any.
-        """
-        for x in self.X_names:
-            x.strip().replace(" ", "")
-        for y in self.Y_names:
-            y.strip().replace(" ", "")
-
     def choose_inputs_and_outputs(self) -> None:
         """
         If there is no bounds in the uploaded file, display widgets that let users choose at least one column
@@ -91,13 +82,13 @@ class RunBOSS:
                 max_selections=1,
                 help="Do not use empty space in variable names."
             )
-        self.strip_white_spaces()
+        # self.strip_white_spaces()
         self.dim = len(self.X_names)
         self.data = self.data[self.X_names + self.Y_names]
 
     def parse_params(self, metadata) -> None:
         """
-        Return the variable names and bounds to run with BOMain object.
+        If the uploaded file has metadata, parse variable names and bounds to BOMain object.
 
         :param metadata: dict
             Metadata obtained from the uploaded file.
@@ -107,7 +98,7 @@ class RunBOSS:
         self.num_init = metadata.get('num_init')
         self.noise = metadata.get('noise', 0)
         self.min = metadata.get('min', True)
-        self.data.columns = [c.strip().replace(" ", "") for c in self.data.columns]
+        self.data.columns = [c.strip().replace(" ", "_") for c in self.data.columns]
         # Input vars are the ones that have bounds in the metadata
         self.X_names = [c for c in self.data.columns if c in metadata.keys()]
 
@@ -200,7 +191,7 @@ class RunBOSS:
             )
 
     @staticmethod
-    def verify_bounds(bounds) -> bool:
+    def verify_bounds(bounds) -> bool | None:
         """
         For each variable, check if the lower bound is smaller than the upper bound.
 
@@ -307,28 +298,32 @@ class RunBOSS:
 
     def add_metadata(self) -> None:
         """
-        Add the metadata as comment lines (indicated by a hash '#' at the beginning of a line).
+        Add the metadata as comment lines (indicated by a hashtag '#' at the beginning of a line).
         Display a download button for data with the metadata.
 
         :return: None
         """
-        metadata = {
+        metadata: dict = {
             'noise': self.noise,
             'min': self.min,
             'num_init': self.num_init,
         }
+        # convert bounds to string
         for d in range(0, self.dim):
             metadata[self.X_names[d]] = str(self.bounds[d].tolist())
-        print(metadata)
-        metadata_str = tomli_w.dumps(metadata)
 
+        # replace in-between whitespaces with an underscore
+        modified_metadata: dict = {key.replace(' ', '_'): value for key, value in metadata.items()}
+
+        # convert dict to string, with one key-value pair per line
+        metadata_str: str = tomli_w.dumps(modified_metadata)
         # remove double quotes
         metadata_str = metadata_str.replace('"', "")
-        # remove any whitespaces (leading, trailing, in-between words)
-        self.strip_white_spaces()
 
-        # add hash at the beginning of each line
+        # add hashtag at the beginning of each line
         metadata_str = "\n".join(["#" + line for line in metadata_str[:-1].split("\n")])
+
+        # Add metadata to data
         self.dload_data = metadata_str + "\n" + self.data.to_csv(index=False)
 
     def download_data(self, widget_key: str) -> None:
