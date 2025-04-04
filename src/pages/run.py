@@ -141,12 +141,14 @@ with postprocess_tab:
         bo_run.display_result()
         res = PostprocessingTab(bo_run.results, bo_run.X_names)
         res.set_model_slice()
+        res.set_var_default()
         if st.button("Run post-processing", type="primary"):
             # Use Postprocessing of BOSS
             pp = PPMain(
                 bo_run.results,
                 pp_models=True,
                 pp_model_slice=res.model_slice,
+                pp_var_defaults=list(res.fixed_vars.values()),
             )
             pp.run()
 
