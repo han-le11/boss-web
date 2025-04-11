@@ -139,7 +139,7 @@ with postprocess_tab:
     st.write("#### Plot the results of the optimization.")
     if bo_run.results is not None:
         bo_run.display_result()
-        res = PostprocessingTab(bo_run.results, bo_run.X_names)
+        res = PostprocessingTab(bo_run.results, bo_run.X_names, bo_run.X_vals)
         res.set_model_slice()
         res.set_var_default()
         if st.button("Run post-processing", type="primary"):
@@ -156,7 +156,7 @@ with postprocess_tab:
         res.load_plots()
 
         if len(res.model_plots) >= 1:
-            col1, col2, col3 = st.columns([1, 2, 1], gap="large")
+            col1, col2, col3 = st.columns([1, 3, 1], gap="large")
             with col1:
                 if st.button("Previous"):
                     res.prev_image()
@@ -165,24 +165,24 @@ with postprocess_tab:
                     res.next_image()
 
             if 0 <= st.session_state.cur_iter < len(res.model_plots):
-                img1, img2 = st.columns(2)
+                img1, img2 = st.columns([1, 1], gap="large")
                 # Display one model plot on the left and one uncertainty plot on the right
                 with img1:
                     st.image(res.model_plots[st.session_state.cur_iter], width=500)
                 with img2:
-                    st.write("")  # temp fix: add a blank line to align 2 plots horizontally
+                    st.write("")  # temporary fix: add a blank line to align 2 plots horizontally
                     st.image(res.uncert_plots[st.session_state.cur_iter], width=500)
 
             # Only display buttons and sliders if there's more than 1 iteration
             if len(res.model_plots) > 1:
                 # Slider value to a variable slider_value
-                res.slider_value = st.slider(label="Select iteration",
-                                         min_value=0,
-                                         max_value=len(res.model_plots) - 1,
-                                         key="iter",
-                                         value=st.session_state.cur_iter,
-                                         )
-                if res.slider_value != st.session_state.cur_iter:
+                res.iter_slider_value = st.slider(label="Select iteration",
+                                                  min_value=0,
+                                                  max_value=len(res.model_plots) - 1,
+                                                  key="iter",
+                                                  value=st.session_state.cur_iter,
+                                                  )
+                if res.iter_slider_value != st.session_state.cur_iter:
                     res.update_slider_value()
 
     else:
