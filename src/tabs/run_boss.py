@@ -13,7 +13,6 @@ class RunBOSS:
     """
     Class for running BOSS.
     """
-
     def __init__(
             self,
             run_help=None,
@@ -23,6 +22,21 @@ class RunBOSS:
             noise=0.0,
             res=None,
     ):
+        """
+        Initialize the RunBOSS class.
+
+        :param run_help: RunBOSSHelper object
+        :param data: DataFrame
+            Dataframe containing the data to be used for BOSS.
+        :param bounds: DataFrame
+            Dataframe containing the bounds of the input variables.
+        :param X_names: list
+            List of input variable names.
+        :param noise: float
+            Noise level for BOSS.
+        :param res: BOResult
+            BO results object.
+        """
         self.dim = run_help.dim if run_help is not None else None
         self.data = data
         self.bounds = bounds
