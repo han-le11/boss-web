@@ -1,4 +1,4 @@
-aalto-boss==1.9.1
+aalto-boss>=1.9.1
 attrs==22.2.0
 cachetools==5.3.0
 Cython==0.29.34
