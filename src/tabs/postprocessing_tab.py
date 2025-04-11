@@ -2,10 +2,12 @@ import numpy as np
 import os
 import streamlit as st
 from PIL import Image
+from boss.pp.graphics import Contour
+from boss.pp.elements import Acquisitions
 
 
 class PostprocessingTab:
-    def __init__(self, bo_results, X_names: list) -> None:
+    def __init__(self, bo_results, X_names: list, X_vals: np.ndarray[float]) -> None:
         """
         Initialize the PostprocessingTab class.
 
@@ -15,29 +17,46 @@ class PostprocessingTab:
         """
         self.bo_results = bo_results
         self.X_names: list = X_names
+        self.X_vals: np.ndarray[float] = X_vals
         self.model_plots: list[Image] = []
         self.uncert_plots: list[Image] = []
         self.model_slice: list = [None, None, None]
         self.fixed_vars: dict[str, float] = {}
-        self.slider_value: int = st.session_state.cur_iter
+        self.iter_slider_value: int = st.session_state.cur_iter
 
     @property
     def fixed_keys(self):
-        # fixed variable names are X_names excluding the variables in model slice
+        """
+        Get the names of the fixed variables.
+
+        :return:
+        fixed_keys: list
+            Fixed variable names.
+        """
+        # fixed variable names are the ones not in the model slice
         return [self.X_names[i] for i in range(len(self.X_names)) if i+1 not in self.model_slice]
 
     @property
     def fixed_values(self):
+        """
+        Get the values of the fixed variables.
+
+        :return:
+        fixed_values: dict
+            Dictionary of fixed variable names and values.
+        """
         return {var: self.fixed_vars.get(var, 0.0) for var in self.fixed_keys}
 
-    # TODO: write unit test
-    def set_var_default(self):
+    @property
+    def num_iter(self):
         """
-        Set default values for fixed variables.
+        Return the number of iterations.
+
+        :return:
+        num_iter: int
+            Number of iterations.
         """
-        # for each fixed variable name, make a number input field
-        for var in self.fixed_keys:
-            self.fixed_vars[var] = st.number_input(label="Fixed value for " + var, value=0.0, key="fixed_" + var)
+        return len(self.model_plots)
 
     # TODO: write unit test
     def set_model_slice(self) -> None:
@@ -45,13 +64,14 @@ class PostprocessingTab:
         Let users choose axes for the 2d cross-section to plot, how many points per edge in the plot grid.
         This setting is passed to use in output and plots.
         """
-        # x and y define the cross-section and z is number of points per axis
-        st.write("Which axes (max 2D) of the objective function to plot?")
+        # x1 and x2 define the cross-section
+        st.write("Which variables of the objective function to plot?")
         col1, col2, col3 = st.columns(3)
         with col1:
-            x1: str = st.selectbox("X1-axis", options=self.X_names)
+            x1: str = st.selectbox("First", options=self.X_names)
         with col2:
-            x2: str = st.selectbox("X2-axis", options=self.X_names, index=1)
+            x2: str = st.selectbox("Second", options=self.X_names, index=1)
+        # number of points to plot per axis
         with col3:
             self.model_slice[2] = st.number_input(
                 "Number of points per axis in the grid", value=50, step=1, min_value=1
@@ -62,7 +82,25 @@ class PostprocessingTab:
         if self.model_slice[0] == self.model_slice[1]:
             st.warning("Please select different axes to display contour plots.")
 
-    # TODO: refactor this to display model plots of n-interations and make it cleaner
+    # TODO: turn the number input into slider. write unit test
+    def set_var_default(self):
+        """
+        Set default values for fixed variables.
+        """
+        # for each fixed variable name, make a slider with min and max value
+        for var in self.fixed_keys:
+            # get the index of the fixed variable in X_names
+            var_index = self.X_names.index(var)
+            min_val = np.min(self.X_vals[:, var_index])
+            max_val = np.max(self.X_vals[:, var_index])
+            self.fixed_vars[var] = st.slider(label="Fixed value for " + var,
+                                             min_value=min_val,
+                                             max_value=max_val,
+                                             key="fixed_" + var)
+        st.write(self.fixed_vars)
+            # solution for number input field
+            # self.fixed_vars[var] = st.number_input(label="Fixed value for " + var, value=0.0, key="fixed_" + var)
+
     def _show_plots(self, path, warning: str = None) -> None:
         """
         Internal function used to display plots.
@@ -112,6 +150,6 @@ class PostprocessingTab:
         """
         Update the slider value.
         """
-        st.session_state.cur_iter = self.slider_value
+        st.session_state.cur_iter = self.iter_slider_value
         st.rerun()
 
