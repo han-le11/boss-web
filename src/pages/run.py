@@ -56,7 +56,8 @@ with setup_tab:
 
             if st.button("Generate points") and bo_run.verify_bounds(bo_run.bounds):
                 init_manager = init.set_init_manager(
-                    bo_run.bounds,
+                    init_type=init.init_type,
+                    bounds=bo_run.bounds,
                 )
                 init_pts = init_manager.get_all()
                 # concatenate an empty column for target values to df and save to session state
@@ -141,16 +142,18 @@ with postprocess_tab:
         bo_run.display_result()
         res = PostprocessingTab(bo_run.results, bo_run.X_names, bo_run.X_vals)
         res.set_model_slice()
-        res.set_var_default()
+        res.set_fixed_inputs()
         if st.button("Run post-processing", type="primary"):
             # Use Postprocessing of BOSS
-            pp = PPMain(
-                bo_run.results,
-                pp_models=True,
-                pp_model_slice=res.model_slice,
-                pp_var_defaults=list(res.fixed_vars.values()),
-            )
-            pp.run()
+            # pp = PPMain(
+            #     bo_run.results,
+            #     pp_models=True,
+            #     pp_model_slice=res.model_slice,
+            #     pp_var_defaults=list(res.fixed_vars.values()),
+            # )
+            # pp.run()
+            res.plot()
+
 
         # Load images of models and uncertainty
         res.load_plots()
@@ -169,6 +172,7 @@ with postprocess_tab:
                 # Display one model plot on the left and one uncertainty plot on the right
                 with img1:
                     st.image(res.model_plots[st.session_state.cur_iter], width=500)
+            if 0 <= st.session_state.cur_iter < len(res.uncert_plots):
                 with img2:
                     st.write("")  # temporary fix: add a blank line to align 2 plots horizontally
                     st.image(res.uncert_plots[st.session_state.cur_iter], width=500)
@@ -184,6 +188,8 @@ with postprocess_tab:
                                                   )
                 if res.iter_slider_value != st.session_state.cur_iter:
                     res.update_slider_value()
+        else:
+            st.warning("There are no plots to display.")
 
     else:
         st.warning(
